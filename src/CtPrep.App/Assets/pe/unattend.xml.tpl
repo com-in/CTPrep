@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- CTPrep unattend answer file (generated automatically - do not edit) -->
 <!--
-  Compatible with Windows 7 / 8 / 10 / 11. Nodes that only exist in newer
-  builds (HideOnlineAccountScreens and friends) are added by the generator
-  according to the detected image version, because an unknown node makes
-  Windows Setup reject the whole answer file.
+  Compatible with Windows 7 / 8 / 10 / 11. Version-specific OOBE nodes are
+  added or removed by the generator according to the detected image version:
+  newer-only nodes (HideOnlineAccountScreens) are omitted for older builds,
+  and the Windows 7-only SkipMachineOOBE / SkipUserOOBE pair is added for
+  Windows 7 only. An unknown node makes Windows Setup reject the whole file.
 -->
 <unattend xmlns="urn:schemas-microsoft-com:unattend">
 

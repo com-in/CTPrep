@@ -676,6 +676,16 @@ public sealed class PePayloadService
             sb.AppendLine("        <HideOnlineAccountScreens>true</HideOnlineAccountScreens>");
         }
 
+        // 微软文档：SkipMachineOOBE / SkipUserOOBE 只在 Windows 7（及更早）上有效，
+        // 作用是把 Windows Welcome 整个跳过；从 Windows 8 起这两个设置已不可用，
+        // 出现即会让安装程序拒绝整份应答文件。所以只给 Win7 目标追加 ——
+        // 缺了它们，Win7 首次开机会真实进入 Windows Welcome 流程。
+        if (majorVersion == 7)
+        {
+            sb.AppendLine("        <SkipMachineOOBE>true</SkipMachineOOBE>");
+            sb.AppendLine("        <SkipUserOOBE>true</SkipUserOOBE>");
+        }
+
         return sb.ToString().TrimEnd('\r', '\n');
     }
 
