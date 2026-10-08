@@ -1,0 +1,40 @@
+# ============================================================
+#  CTPrep .gitignore
+#  原则：只跟踪人写的内容与少量必需的小体积产物；
+#  可再生成或体积过大的（构建输出、工具链、PE 镜像）都不入库。
+# ============================================================
+
+# ---------- .NET 构建输出 ----------
+src/CtPrep.App/bin/
+src/CtPrep.App/obj/
+src/CtPrep.PeUi/obj/
+# PeUi 的 bin 里只有 CTPrep.PeUi.exe：主程序编译时必须把它嵌入资源（约 2 MB），
+# 由 tools/build-pe-ui.ps1 生成。这一个文件保留入库，bin 下其余内容忽略。
+src/CtPrep.PeUi/bin/*
+!src/CtPrep.PeUi/bin/CTPrep.PeUi.exe
+
+# ---------- 发布 / 打包输出 ----------
+/publish/
+/publish-green/
+
+# ---------- 中间产物（字体生成、PE 中间件、测试脚手架等） ----------
+/build/
+
+# ---------- 工具链与下载包（体积大、可再获取） ----------
+/tools/compiler/
+/tools/compiler-download/
+/tools/*.zip
+/tools/*.7z
+
+# ---------- IDE / 临时文件 ----------
+.vs/
+.idea/
+*.user
+*.suo
+*.log
+Thumbs.db
+desktop.ini
+
+# ---------- 工作备忘 ----------
+# 用户 2026-10-08 决定：Agent 工作记忆不随公开仓库发布，仅保留在本地
+.workbuddy/

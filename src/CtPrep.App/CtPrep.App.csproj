@@ -1,0 +1,60 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>CtPrep.App</RootNamespace>
+    <AssemblyName>CTPrep</AssemblyName>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <Platforms>x64</Platforms>
+    <PlatformTarget>x64</PlatformTarget>
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+    <Version>1.0.0</Version>
+    <Product>CTPrep 一键重装</Product>
+    <AssemblyTitle>CTPrep</AssemblyTitle>
+    <SatelliteResourceLanguages>zh-Hans</SatelliteResourceLanguages>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- WPF 的隐式 using 默认不含以下命名空间，这里统一补齐 -->
+    <Using Include="System.IO" />
+    <Using Include="System.Net.Http" />
+    <Using Include="System.Text" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- WMI 查询（探测本机系统信息 / 分区信息） -->
+    <PackageReference Include="System.Management" Version="8.0.0" />
+    <!-- 读取 GBK(936) 控制台输出，避免中文命令回显乱码 -->
+    <PackageReference Include="System.Text.Encoding.CodePages" Version="8.0.0" />
+  </ItemGroup>
+
+    <ItemGroup>
+        <!-- PE 侧部署载荷模板：以嵌入资源方式打包，随程序发布不依赖工作目录 -->
+        <EmbeddedResource Include="Assets\pe\startnet.cmd" />
+        <!-- 界面文案：每种语言一份 JSON，文件名即语言代码 -->
+        <EmbeddedResource Include="Assets\i18n\*.json" />
+    <EmbeddedResource Include="Assets\pe\deploy.cmd.tpl" />
+    <EmbeddedResource Include="Assets\pe\unattend.xml.tpl" />
+    <EmbeddedResource Include="Assets\pe\SetupComplete.cmd.tpl" />
+    <!-- PE 原生界面自带的 CJK 字体（Noto Sans SC 子集，SIL OFL 1.1）已链接进
+         CTPrep.PeUi.exe（见 tools/build-pe-font.py 生成 font_data.c），
+         这里不再单独嵌入，避免同一份字体在程序里存两遍。 -->
+    <EmbeddedResource Include="..\CtPrep.PeUi\bin\CTPrep.PeUi.exe" LogicalName="CtPrep.App.Assets.pe.CTPrep.PeUi.exe" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- 仓库根目录的 config.ini 作为新手模式（默认）配置源，链接到输出目录 -->
+    <None Include="..\..\config.ini" Link="config.ini" CopyToOutputDirectory="PreserveNewest" />
+    <!-- custom.ini 作为高级设置配置源，与默认配置分开 -->
+    <None Include="..\..\custom.ini" Link="custom.ini" CopyToOutputDirectory="PreserveNewest" />
+    <!-- 默认 PE 载荷也必须随绿色版发布；config.ini 的默认路径指向该目录。 -->
+    <None Include="..\..\runtime\**\*" Link="runtime\%(RecursiveDir)%(Filename)%(Extension)"
+          CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

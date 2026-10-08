@@ -1,0 +1,61 @@
+# Build CI - compiles CTPrep and produces the green (self-contained win-x64) build.
+#
+# Notes:
+#   - src/CtPrep.PeUi/bin/CTPrep.PeUi.exe is committed on purpose: the WPF project
+#     embeds it as a resource, and rebuilding it would need the portable Zig
+#     toolchain. The runner therefore does not build the native PE UI
+#     (see PE-UPDATE.md).
+#   - runtime/pe/boot.wim (336 MB) is stored in the repository through Git LFS,
+#     so checkout runs with lfs: true and the uploaded artifact is a complete
+#     green build. Note: each run downloads the LFS object once (LFS bandwidth
+#     quota applies).
+name: build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: "build-${{ github.ref }}"
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # boot.wim is a Git LFS object: without this the artifact would contain a pointer file
+          lfs: true
+
+      - name: Set up .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+          cache: true
+          cache-dependency-path: src/CtPrep.App/CtPrep.App.csproj
+
+      - name: Build (Release)
+        run: dotnet build src/CtPrep.App/CtPrep.App.csproj -c Release
+
+      # Self-contained publish needs win-x64 runtime assets, so it must run its
+      # own restore (the profile supplies the RID). Do not add --no-restore here:
+      # a RID-less restore would make publish fail with NETSDK1047.
+      - name: Publish (green, self-contained)
+        run: dotnet publish src/CtPrep.App/CtPrep.App.csproj -p:PublishProfile=Green-x64
+
+      - name: Upload the green build
+        uses: actions/upload-artifact@v4
+        with:
+          name: CTPrep-publish-green
+          path: publish-green/
+          retention-days: 7
+          if-no-files-found: error

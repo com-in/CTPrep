@@ -1,0 +1,10 @@
+# Cloudflare Pages 响应头配置（文件名必须叫 _headers）
+# 语法：路径 / 缩进两格的 响应头: 值
+
+# 链接清单要能尽快更新：短缓存即可，程序每次部署前都会重新请求
+/images.json
+  Cache-Control: public, max-age=60
+
+# 其余静态资源
+/*
+  X-Content-Type-Options: nosniff

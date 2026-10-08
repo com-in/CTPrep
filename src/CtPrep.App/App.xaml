@@ -1,0 +1,340 @@
+<Application x:Class="CtPrep.App.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             ShutdownMode="OnMainWindowClose">
+    <Application.Resources>
+        <ResourceDictionary>
+
+            <!-- ============================================================
+                 1. 配色：语义化分级
+                 页面底色 → 卡片面 → 边框/分隔 → 正文 → 次要文字 → 弱化辅助
+                 ============================================================ -->
+            <SolidColorBrush x:Key="PageBackground" Color="#F4F6F9" />
+            <SolidColorBrush x:Key="CardBackground" Color="#FFFFFF" />
+            <SolidColorBrush x:Key="BorderSoft" Color="#E3E7EE" />
+            <SolidColorBrush x:Key="DividerBrush" Color="#EDF0F5" />
+            <SolidColorBrush x:Key="TrackBrush" Color="#E9ECF2" />
+
+            <SolidColorBrush x:Key="TextPrimary" Color="#1B1F27" />
+            <SolidColorBrush x:Key="TextSecondary" Color="#69707D" />
+            <SolidColorBrush x:Key="TextTertiary" Color="#9AA1AF" />
+
+            <SolidColorBrush x:Key="Accent" Color="#2B6CF6" />
+            <SolidColorBrush x:Key="AccentDark" Color="#1B4FBF" />
+            <SolidColorBrush x:Key="DangerBrush" Color="#D93025" />
+
+            <!-- 警示容器专用三色配套，避免每处自己挑颜色 -->
+            <SolidColorBrush x:Key="WarnBackground" Color="#FFF8E6" />
+            <SolidColorBrush x:Key="WarnBorder" Color="#F0C36D" />
+            <SolidColorBrush x:Key="WarnText" Color="#8A5A00" />
+
+            <!-- 危险操作：重要警告统一用这套红 -->
+            <SolidColorBrush x:Key="DangerSoftBackground" Color="#FDECEA" />
+
+            <SolidColorBrush x:Key="LogBackground" Color="#15181E" />
+            <SolidColorBrush x:Key="LogText" Color="#C7D0E0" />
+
+            <!-- 细滚动条：轨道透明，只留一条 6px 滑块 -->
+            <SolidColorBrush x:Key="ScrollThumb" Color="#B7BDC9" />
+            <SolidColorBrush x:Key="ScrollThumbHover" Color="#8A93A4" />
+
+            <!-- ============================================================
+                 2. 尺寸刻度：圆角 / 内边距 / 表单列宽
+                 ============================================================ -->
+            <CornerRadius x:Key="RadiusCard">8</CornerRadius>
+            <CornerRadius x:Key="RadiusControl">5</CornerRadius>
+            <Thickness x:Key="CardPadding">16</Thickness>
+            <Thickness x:Key="FieldPadding">8,5</Thickness>
+            <FontFamily x:Key="MonoFont">Consolas</FontFamily>
+
+            <!-- 表单标签列统一宽度，所有“标签 + 输入”行都引用它，保证左对齐基准一致 -->
+            <GridLength x:Key="LabelColumn">104</GridLength>
+
+            <!-- ============================================================
+                 3. 文字层级：24 / 18 / 13(正文) / 12(次要) / 11(弱化)
+                 ============================================================ -->
+            <Style TargetType="TextBlock">
+                <Setter Property="Foreground" Value="{StaticResource TextPrimary}" />
+                <Setter Property="FontFamily" Value="Microsoft YaHei UI, Segoe UI" />
+                <Setter Property="FontSize" Value="13" />
+            </Style>
+
+            <Style x:Key="PageTitleText" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                <Setter Property="FontSize" Value="24" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+            </Style>
+
+            <Style x:Key="SectionText" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                <Setter Property="FontSize" Value="13" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+                <Setter Property="Margin" Value="0,0,0,10" />
+            </Style>
+
+            <!-- 表单标签：弱一级，和右侧输入值的视觉权重拉开 -->
+            <Style x:Key="LabelText" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                <Setter Property="Foreground" Value="{StaticResource TextSecondary}" />
+                <Setter Property="FontSize" Value="12" />
+                <Setter Property="VerticalAlignment" Value="Center" />
+            </Style>
+
+            <!-- 右栏信息区：正文级，窄栏里允许换行（路径类的值很长） -->
+            <Style x:Key="InfoText" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                <Setter Property="FontSize" Value="13" />
+                <Setter Property="TextWrapping" Value="Wrap" />
+            </Style>
+
+            <Style x:Key="HintText" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                <Setter Property="Foreground" Value="{StaticResource TextSecondary}" />
+                <Setter Property="FontSize" Value="12" />
+                <Setter Property="LineHeight" Value="18" />
+                <Setter Property="TextWrapping" Value="Wrap" />
+            </Style>
+
+            <Style x:Key="CaptionText" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                <Setter Property="Foreground" Value="{StaticResource TextTertiary}" />
+                <Setter Property="FontSize" Value="11" />
+            </Style>
+
+            <!-- ============================================================
+                 4. 容器 / 分隔
+                 ============================================================ -->
+            <Style x:Key="Card" TargetType="Border">
+                <Setter Property="Background" Value="{StaticResource CardBackground}" />
+                <Setter Property="BorderBrush" Value="{StaticResource BorderSoft}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="CornerRadius" Value="{StaticResource RadiusCard}" />
+                <Setter Property="Padding" Value="{StaticResource CardPadding}" />
+            </Style>
+
+            <!-- 用 1px 细线代替“每张卡再加一个边框”，组间距靠它统一 -->
+            <Style x:Key="Divider" TargetType="Border">
+                <Setter Property="Height" Value="1" />
+                <Setter Property="Background" Value="{StaticResource DividerBrush}" />
+                <Setter Property="Margin" Value="0,4,0,16" />
+            </Style>
+
+            <!-- 表单行的统一行距 -->
+            <Style x:Key="FormRow" TargetType="Grid">
+                <Setter Property="Margin" Value="0,0,0,10" />
+            </Style>
+
+            <!-- ============================================================
+                 5. 控件：统一高度 30，圆角与描边一致
+                 ============================================================ -->
+            <Style TargetType="TextBox">
+                <Setter Property="MinHeight" Value="30" />
+                <Setter Property="Padding" Value="{StaticResource FieldPadding}" />
+                <Setter Property="VerticalContentAlignment" Value="Center" />
+                <Setter Property="BorderBrush" Value="{StaticResource BorderSoft}" />
+                <Setter Property="FontFamily" Value="Microsoft YaHei UI, Segoe UI" />
+            </Style>
+
+            <Style TargetType="ComboBox">
+                <Setter Property="MinHeight" Value="30" />
+                <Setter Property="Padding" Value="6,4" />
+                <Setter Property="VerticalContentAlignment" Value="Center" />
+                <Setter Property="FontFamily" Value="Microsoft YaHei UI, Segoe UI" />
+            </Style>
+
+            <Style TargetType="CheckBox">
+                <Setter Property="Margin" Value="0,0,0,8" />
+                <Setter Property="VerticalContentAlignment" Value="Center" />
+                <Setter Property="FontFamily" Value="Microsoft YaHei UI, Segoe UI" />
+            </Style>
+
+            <Style x:Key="PrimaryButton" TargetType="Button">
+                <Setter Property="Background" Value="{StaticResource Accent}" />
+                <Setter Property="Foreground" Value="White" />
+                <Setter Property="FontSize" Value="15" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+                <Setter Property="Padding" Value="24,12" />
+                <Setter Property="BorderThickness" Value="0" />
+                <Setter Property="Cursor" Value="Hand" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="Bd" Background="{TemplateBinding Background}"
+                                    CornerRadius="{StaticResource RadiusControl}" Padding="{TemplateBinding Padding}">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Bd" Property="Background" Value="{StaticResource AccentDark}" />
+                                </Trigger>
+                                <Trigger Property="IsEnabled" Value="False">
+                                    <Setter TargetName="Bd" Property="Background" Value="#B9C2D6" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <!-- 次级按钮：高度与圆角同主按钮保持一致，视觉重量明显更弱 -->
+            <Style x:Key="SecondaryButton" TargetType="Button" BasedOn="{StaticResource PrimaryButton}">
+                <Setter Property="Background" Value="#F2F4F8" />
+                <Setter Property="Foreground" Value="{StaticResource TextPrimary}" />
+                <Setter Property="FontSize" Value="13" />
+                <Setter Property="FontWeight" Value="Normal" />
+                <Setter Property="Padding" Value="12,6" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="Bd" Background="{TemplateBinding Background}"
+                                    CornerRadius="{StaticResource RadiusControl}"
+                                    BorderBrush="{StaticResource BorderSoft}" BorderThickness="1"
+                                    Padding="{TemplateBinding Padding}">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Bd" Property="Background" Value="#E6EAF2" />
+                                </Trigger>
+                                <Trigger Property="IsEnabled" Value="False">
+                                    <Setter TargetName="Bd" Property="Opacity" Value="0.5" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <!-- 危险操作按钮：与 PrimaryButton 同尺寸，红色实心 -->
+            <Style x:Key="DangerButton" TargetType="Button" BasedOn="{StaticResource PrimaryButton}">
+                <Setter Property="Background" Value="{StaticResource DangerBrush}" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="Bd" Background="{TemplateBinding Background}"
+                                    CornerRadius="{StaticResource RadiusControl}" Padding="{TemplateBinding Padding}">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Bd" Property="Background" Value="#B02319" />
+                                </Trigger>
+                                <Trigger Property="IsEnabled" Value="False">
+                                    <Setter TargetName="Bd" Property="Background" Value="#D9A7A2" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <!-- ============================================================
+                 6. 滚动条：占 10px、滑块视觉 6px，去掉箭头按钮与轨道底色
+                 ============================================================ -->
+            <Style x:Key="ThinScrollBarThumb" TargetType="Thumb">
+                <Setter Property="OverridesDefaultStyle" Value="True" />
+                <Setter Property="IsTabStop" Value="False" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Thumb">
+                            <Border x:Name="Bd" Margin="2" Background="{StaticResource ScrollThumb}" CornerRadius="2" />
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Bd" Property="Background" Value="{StaticResource ScrollThumbHover}" />
+                                </Trigger>
+                                <Trigger Property="IsDragging" Value="True">
+                                    <Setter TargetName="Bd" Property="Background" Value="{StaticResource ScrollThumbHover}" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+                <Style.Triggers>
+                    <!-- 内容很长时滑块会变得极短，给一个最小长度保证还能拖 -->
+                    <DataTrigger Binding="{Binding Orientation, RelativeSource={RelativeSource AncestorType=ScrollBar}}" Value="Vertical">
+                        <Setter Property="MinHeight" Value="28" />
+                    </DataTrigger>
+                    <DataTrigger Binding="{Binding Orientation, RelativeSource={RelativeSource AncestorType=ScrollBar}}" Value="Horizontal">
+                        <Setter Property="MinWidth" Value="28" />
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+
+            <Style TargetType="ScrollBar">
+                <Setter Property="OverridesDefaultStyle" Value="True" />
+                <Setter Property="SnapsToDevicePixels" Value="True" />
+                <Setter Property="Background" Value="Transparent" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="ScrollBar">
+                            <Grid Background="Transparent">
+                                <Track x:Name="PART_Track" Orientation="{TemplateBinding Orientation}"
+                                       IsDirectionReversed="True" Focusable="False"
+                                       IsEnabled="{TemplateBinding IsEnabled}">
+                                    <Track.DecreaseRepeatButton>
+                                        <RepeatButton Command="ScrollBar.PageUpCommand"
+                                                      Opacity="0" IsTabStop="False" Focusable="False" />
+                                    </Track.DecreaseRepeatButton>
+                                    <Track.IncreaseRepeatButton>
+                                        <RepeatButton Command="ScrollBar.PageDownCommand"
+                                                      Opacity="0" IsTabStop="False" Focusable="False" />
+                                    </Track.IncreaseRepeatButton>
+                                    <Track.Thumb>
+                                        <Thumb Style="{StaticResource ThinScrollBarThumb}" />
+                                    </Track.Thumb>
+                                </Track>
+                            </Grid>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="Orientation" Value="Vertical">
+                                    <Setter Property="Width" Value="10" />
+                                    <Setter Property="MinWidth" Value="10" />
+                                </Trigger>
+                                <Trigger Property="Orientation" Value="Horizontal">
+                                    <Setter Property="Height" Value="10" />
+                                    <Setter Property="MinHeight" Value="10" />
+                                    <Setter TargetName="PART_Track" Property="IsDirectionReversed" Value="False" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <!-- ============================================================
+                 7. 标签页：去掉默认立体边框，改用底部指示条
+                 ============================================================ -->
+            <Style TargetType="TabControl">
+                <Setter Property="Background" Value="Transparent" />
+                <Setter Property="BorderThickness" Value="0" />
+                <Setter Property="Padding" Value="0" />
+            </Style>
+
+            <Style TargetType="TabItem">
+                <Setter Property="Foreground" Value="{StaticResource TextSecondary}" />
+                <Setter Property="FontFamily" Value="Microsoft YaHei UI, Segoe UI" />
+                <Setter Property="FontSize" Value="14" />
+                <Setter Property="MinWidth" Value="88" />
+                <Setter Property="MinHeight" Value="34" />
+                <Setter Property="Margin" Value="0,0,16,0" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="TabItem">
+                            <Grid Background="Transparent">
+                                <Border x:Name="Indicator" Height="2" VerticalAlignment="Bottom"
+                                        Background="Transparent" CornerRadius="1" />
+                                <ContentPresenter x:Name="ContentSite" ContentSource="Header"
+                                                  HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                  Margin="2,0,2,2" RecognizesAccessKey="True" />
+                            </Grid>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsSelected" Value="True">
+                                    <Setter TargetName="ContentSite" Property="TextElement.FontWeight" Value="SemiBold" />
+                                    <Setter TargetName="ContentSite" Property="TextElement.Foreground" Value="{StaticResource Accent}" />
+                                    <Setter TargetName="Indicator" Property="Background" Value="{StaticResource Accent}" />
+                                </Trigger>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="ContentSite" Property="TextElement.Foreground" Value="{StaticResource TextPrimary}" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

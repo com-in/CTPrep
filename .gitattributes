@@ -1,0 +1,3 @@
+# PE 镜像是 336 MB 的大文件：走 Git LFS，避免超过 GitHub 的 100 MB 单文件限制。
+# 克隆/CI 需要 git-lfs；GitHub Actions 的 checkout 已开启 lfs: true。
+runtime/pe/boot.wim filter=lfs diff=lfs merge=lfs -text
