@@ -1,13 +1,13 @@
 {
   "schema": 1,
-  "updated": "2026-10-08T13:59:29Z",
+  "updated": "2026-10-08T19:30:04Z",
   "images": {
     "Windows 11": {
-      "url": "https://software.download.prss.microsoft.com/dbazure/Windows11_Client_x64_zh-cn_26300_9457.iso?t=753ccea9-8c73-486f-b879-432017ec20f8&P1=1791554362&P2=602&P3=2&P4=qQUazOYtrLvA%2bIouYq6iU5oZ39MywkmNDgt3r1J%2bMwVTtZBUbratOV8jlkESikO5%2fsv%2b2NUn01uZS9xPl0aQINr%2bYztKUDPkkf60EYuc6ILGwGvE334Efy1yjPG8YCLI8EzFbxCV4cF1LSziwPGr1Sm7wQbScOXngg%2b562tUvktMqKxWbhfIVzeHFicV3IdTb%2f445zXalvG7LXOG7%2bveTEiA%2bfU8ihFmu7156P8DMqbvTEOaYarY9D9BhOAUrGrrDBB%2bLOcOEKCNlDewhsKWSHUajCU2h7n2KlqYGLnzC46XUSZQP5Dno52bA5SLgk%2fFFtfZDGIf980GcsuJeccerA%3d%3d",
+      "url": "https://software.download.prss.microsoft.com/dbazure/Windows11_Client_x64_zh-cn_26300_9457.iso?t=b43983dd-0b12-44f3-8630-3347bf340efa&P1=1791574197&P2=602&P3=2&P4=SQJ4HzSfO2SYAd5VKqycfGvBtZgRR4ggUep73MuKvZMEOtJhytbpMLW9mS8JZ89EDNhZ9EbzD0U6Y8kgMhzqhUmXd1fAjVKv85wJ2K2Abiiagk7c6IJKnAHvpzCyVxHVkeGePAoYl77FpkmwFvC9LN3lbePzheFAML1CWJvd53zAcZ9LZkoXb48O5U01gfDiPwOUrn8gMAUkmztxkajD2kwCJTEw75HDUybm2vjNVkGqgFadihLzUl1%2bpucuIRWyczKr7rDTgTZ2dq27vgsknEnX7eBbjMtHcbmJe98gvGIRx9HmhOEtZngryTbJ16RaquMjBoMlDW8KBfUlhQealw%3d%3d",
       "sha256": ""
     },
     "Windows 10": {
-      "url": "https://software.download.prss.microsoft.com/dbazure/Win10_22H2_Chinese_Simplified_x64v1.iso?t=c93f8608-334c-4da8-ae01-ab9078dea51f&P1=1791554369&P2=602&P3=2&P4=YV2tFNqvIlYkbk1Np64V%2bKSxDMSnWCTsaoAWEen7if8BNkToJtrcqYVu368r5epHiK2fhH%2f5VD8dpZQAz5O4ssdryJ%2boHHnchuvKwNdzTojDC%2fVk%2feZ95zPwumR765%2feADECi46HDT9Km56Zp7VzQJeQBxs16aQBiHXAEIsX4RGcotHGQfyIxqf4cmTxnVfNlLuSMvho03Za3j42UhOE%2bSVG4Xj2L%2fCmDOBBxHFUP2kVf%2fwsJ8YnOlt20cK9JT3fXqZu754vMlt8x2toLKKzjkEuSbKpMCVYkKqEb1rd4h2j4Hogb0AaR36V7JFT5NYRNeK8GEMjyfU%2bhUuDozBFQQ%3d%3d",
+      "url": "https://software.download.prss.microsoft.com/dbazure/Win10_22H2_Chinese_Simplified_x64v1.iso?t=62fc1a0f-5ab7-4a68-b7db-4b399260d265&P1=1791574204&P2=602&P3=2&P4=N4SkRWNgNhxCbgC4kwsy58nMekyYlE3VOW8hMVGCbPYYz2h7zQtv4x8dKyCx%2f8jUJCCgM2uk6r6iC71gF0R7q1QEOE8xV6Qtf%2bH39ie9dDFOu9T7zGZVJBe7e1TDm2WhLsZkXTMN44qJ0udUrYrpqtxdEzJz9c12EvYxdT5QqmKZZQt%2f2Sxko7TqQmpQWYAfU8RGKu3N%2fUs0dHPMp6%2bG7l5yJ3u64rNBhLRBTmiRBxqhMllLjcxowQPsFCAY1hmCsf8%2bvw2kP0tqMWca38LCRlOtR7UTBAV6%2bglywo%2b0NhC5evUWzJfYl3ZvmqXXurF5PMs6tIPF4cK6ep2P8Kzo0A%3d%3d",
       "sha256": ""
     }
   }
