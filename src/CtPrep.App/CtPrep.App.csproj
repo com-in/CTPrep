@@ -13,7 +13,7 @@
     <Platforms>x64</Platforms>
     <PlatformTarget>x64</PlatformTarget>
     <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
-    <Version>0.2.1</Version>
+    <Version>0.2.2</Version>
     <Product>CTPrep 一键重装</Product>
     <AssemblyTitle>CTPrep</AssemblyTitle>
     <SatelliteResourceLanguages>zh-Hans</SatelliteResourceLanguages>
