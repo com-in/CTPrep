@@ -118,6 +118,31 @@ LightningPE=https://<你的域名>/images.json
 
 > 自定义域名可选：在 Pages 项目里绑定即可（CF 托管域名免备案，免费）。
 
+## 自动同步微软官方链接（可选）
+
+微软官方直链约 24 小时后失效，所以指向微软的清单条目需要定期刷新。仓库自带一条工具链——抓取部分**复用**了 [caichengjie/microsoft-iso-directlink](https://github.com/caichengjie/microsoft-iso-directlink)（MIT 协议，已内置到 `tools/microsoft-iso-directlink/`）：
+
+```bash
+python tools/sync-microsoft-links.py --print                  # 预演：只打印抓到的链接，不改文件
+python tools/sync-microsoft-links.py                          # 正式更新 docs/images.json
+```
+
+- 只更新它负责的两个家族键（`Windows 11`、`Windows 10`），且放在 `images` 最前，保证家族匹配优先命中最新版；
+- 自建分发的条目（Win8.1 / Win7、PE 等）原样保留；
+- 全部成功才写文件，任何一步失败都不动旧清单——旧清单继续可用。
+
+定时方式任选（Windows 上需要 Git for Windows 提供 bash）：
+
+- **服务器（推荐）**——crontab 加一行，每天跑一次：
+  `30 20 * * * cd /srv/ctprep && python3 tools/sync-microsoft-links.py`
+- **Windows 任务计划**——每天执行一次 `python tools\sync-microsoft-links.py`；
+- **GitHub Actions**——加一个 schedule 工作流，跑完把清单提交回仓库。
+
+两个注意点：
+
+- 微软每次发大版本可能**更换 EditionId**：脚本顶部 `TARGETS` 里是当前候选（按序尝试，命中即用）；核查最新编号用 `bash tools/microsoft-iso-directlink/get_microsoft_iso_link.sh list`，或看 [pbatard/Fido](https://github.com/pbatard/Fido) 源码的 `$WindowsVersions` 表。
+- 报 `SentinelReject` 是微软按 IP 短期限流：每天 1 次的频率没有压力；被拒时等 10-30 分钟再跑，不要连续重试。
+
 ## 日常维护
 
 1. **更新链接**：改 `docs/images.json` → 推送；GitHub Pages 约 10 分钟内、Cloudflare Pages 约 60 秒内生效；
