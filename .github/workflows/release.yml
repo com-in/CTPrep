@@ -175,7 +175,16 @@ jobs:
           $name = "CTPrep-v$version-${{ matrix.flavor }}"
           $src = "publish-${{ matrix.flavor }}"
           if (-not (Test-Path "$src\CTPrep.exe")) { throw "publish output missing: $src" }
-          Compress-Archive -Path "$src\*" -DestinationPath "$name.zip" -CompressionLevel Optimal
+
+          # Put the build inside an outer "CTPrep" folder: extracting the
+          # archive then yields one self-contained directory instead of
+          # scattering files into wherever the user happened to extract it.
+          $root = Join-Path $PWD "CTPrep"
+          if (Test-Path $root) { Remove-Item -Recurse -Force $root }
+          New-Item -ItemType Directory -Path $root | Out-Null
+          Copy-Item -Path (Join-Path $src '*') -Destination $root -Recurse -Force
+
+          Compress-Archive -Path $root -DestinationPath "$name.zip" -CompressionLevel Optimal
           Get-Item "$name.zip" | ForEach-Object { "{0}  {1:N1} MB" -f $_.Name, ($_.Length / 1MB) }
 
       - name: Upload package
