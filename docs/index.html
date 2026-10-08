@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>CTPrep · Windows 一键重装工具</title>
-<meta name="description" content="CTPrep：自动识别本机版本、下载镜像与 WinPE、重启后无人值守完成安装的 Windows 重装工具。不需要 U 盘，绿色免安装。">
+<title>CTPrep · 不用 U 盘重装 Windows</title>
+<meta name="description" content="CTPrep：在 Windows 里直接重装 Windows，不用 U 盘。镜像和 WinPE 下载到一块暂存分区，重启后自动分区、装系统、建账户。">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232B6CF6'/%3E%3Cpath d='M36 10 17 36h12l-4 18 21-27H34z' fill='white'/%3E%3C/svg%3E">
 <style>
   :root {
@@ -189,11 +189,11 @@
   <!-- ================= Hero ================= -->
   <section class="hero" style="border-top:0">
     <div>
-      <span class="tag">免 U 盘 · 全自动部署</span>
-      <h1>重装 Windows，点一次就够</h1>
+      <span class="tag">免 U 盘</span>
+      <h1>在这台电脑上重装 Windows</h1>
       <p class="sub">
-        自动识别本机系统版本，联网下载镜像与 WinPE，重启后无人值守地完成分区、安装与初始设置。
-        不用 U 盘，不用敲命令；双语界面，全程日志可见。
+        下载镜像和 WinPE 到一块暂存分区，重启后自动分区、装系统、建账户。装完回收这块分区，空间还回原处。
+        界面中英双语，每一步都写了日志。
       </p>
       <div class="actions">
         <a class="btn" href="https://github.com/com-in/CTPrep/releases">下载绿色版</a>
@@ -212,7 +212,7 @@
 <span class="t">[12:02:12]</span> 正在准备暂存分区…<br>
 <span class="t">[12:03:40]</span> 正在注册 PE 启动项…<br>
 <span class="t">[12:03:44]</span> <span class="hi">10 秒后自动重启进入 PE</span><br>
-<span class="dim">部署在 PE 中继续，无需任何操作。</span>
+<span class="dim">重启之后就不用管了。</span>
     </div>
   </section>
 
@@ -223,33 +223,33 @@
     <div class="grid">
       <div class="card">
         <svg class="ico" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h16v12H4z"/><path d="M8 20h8"/><path d="M12 16v4"/></svg>
-        <h3>免 U 盘部署</h3>
-        <p>WinPE 直接写入本机暂存分区并注册一次性启动项，重启自动进入部署环境，装完自动清理，不留痕迹。</p>
+        <h3>PE 从哪来</h3>
+        <p>WinPE 写进本机的一块暂存分区，启动项只生效一次。重启进 PE 开始装，装完删掉这块分区，空间还回原处。</p>
       </div>
       <div class="card">
         <svg class="ico" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
-        <h3>版本自动匹配</h3>
-        <p>探测本机系统版本并挑出对应版本安装；本地镜像含多个版本时，弹窗让你选。</p>
+        <h3>装哪个版本</h3>
+        <p>按本机版本在镜像里挑对应的那个。镜像里版本不止一个时，弹出来让你自己选。</p>
       </div>
       <div class="card">
         <svg class="ico" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 13l4 4L19 7"/></svg>
-        <h3>无人值守安装</h3>
-        <p>跳过 OOBE、自动创建账户、设置时区并沿用原用户名；首次进入桌面即可用。</p>
+        <h3>第一次开机</h3>
+        <p>OOBE 跳过，账户、时区、计算机名都配好，用户名沿用原来的。进桌面时这些已经弄完了。</p>
       </div>
       <div class="card">
         <svg class="ico" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="7" rx="1.5"/><rect x="3" y="14" width="18" height="7" rx="1.5"/><path d="M7 6.5h.01M7 17.5h.01"/></svg>
-        <h3>灵活的目标与方式</h3>
-        <p>全新安装 / 保留文件 / 整盘重建三种模式；可换磁盘安装、选择是否格式化引导分区，危险项都有二次确认。</p>
+        <h3>装到哪、怎么装</h3>
+        <p>全新安装、保留文件、整盘重建，三种。系统可以装到另一块盘，也能决定要不要格式化引导分区。会删数据的操作都要再确认一次。</p>
       </div>
       <div class="card">
         <svg class="ico" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v6"/><path d="M6 9h12l-1 12H7z"/></svg>
-        <h3>驱动预装与系统设置</h3>
-        <p>首次启动时自动安装你准备的驱动包（.zip / .exe / 目录）；可选一键禁用 Windows Defender。</p>
+        <h3>驱动和 Defender</h3>
+        <p>第一次开机时把你准备的驱动包装上，zip、exe、目录都行。要不要顺手禁用 Windows Defender，自己勾。</p>
       </div>
       <div class="card">
         <svg class="ico" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
-        <h3>全程可见</h3>
-        <p>准备阶段带进度与详细日志；PE 内是图形界面，实时显示部署阶段与 DISM 百分比，失败时保留日志。</p>
+        <h3>进度和日志</h3>
+        <p>准备阶段有进度，日志一条条写着。PE 里是图形界面，显示当前在哪个阶段、DISM 走到百分之几。失败了日志留在原地。</p>
       </div>
     </div>
   </section>
@@ -257,7 +257,7 @@
   <!-- ================= How it works ================= -->
   <section id="how">
     <h2>流程</h2>
-    <p class="lead">准备阶段在主程序完成，重启后全部自动。</p>
+    <p class="lead">前三步在当前系统里做，重启之后就不用管了。</p>
     <div class="steps">
       <div class="step">
         <h3>准备</h3>
@@ -273,7 +273,7 @@
       </div>
       <div class="step">
         <h3>首次启动</h3>
-        <p>自动完成初始设置与账户创建、安装驱动包，进入桌面；暂存分区自动回收，空间合并回去。</p>
+        <p>初始设置和账户建好，驱动装上，进桌面。暂存分区这时删掉，空间合并回原来的分区。</p>
       </div>
     </div>
   </section>
@@ -317,7 +317,7 @@
   <!-- ================= Download ================= -->
   <section id="download" style="border-top:1px solid var(--divider)">
     <h2>下载</h2>
-    <p class="lead">绿色版自带 .NET 8 运行时，解压即用。</p>
+    <p class="lead">绿色版自带 .NET 8 运行时，文件夹拷过去就能跑。</p>
     <div class="dl">
       <div class="card">
         <h3 style="font-size:17px;margin-bottom:10px">CTPrep 绿色版</h3>
@@ -331,9 +331,9 @@
       <div class="card">
         <h3 style="font-size:17px;margin-bottom:10px">使用建议</h3>
         <ul>
-          <li>新手模式：一路默认即可完成重装</li>
-          <li>高级设置：可选镜像版本、目标磁盘、是否格式化引导分区、驱动包等</li>
-          <li>第一次使用建议先在虚拟机里跑一遍完整流程</li>
+          <li>新手模式：一路点确认，走完就是一次重装</li>
+          <li>高级设置：镜像版本、目标磁盘、格式化引导分区、驱动包都在里面</li>
+          <li>第一次用，建议先在虚拟机里走一遍完整流程</li>
         </ul>
       </div>
     </div>
