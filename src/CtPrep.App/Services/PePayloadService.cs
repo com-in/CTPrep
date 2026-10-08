@@ -669,29 +669,30 @@ public sealed class PePayloadService
     private static string RenderOobeBlock(int majorVersion)
     {
         var sb = new StringBuilder();
-        // 以下节点从 Vista 起所有版本都支持
+
+        // 通用节点：Vista 起所有版本都有；Windows 7 的官方自动化文档
+        // （Automate Windows Welcome，dd744547）逐页列出了其中每一个。
         sb.AppendLine("        <HideEULAPage>true</HideEULAPage>");
-        sb.AppendLine("        <HideOEMRegistrationScreen>true</HideOEMRegistrationScreen>");
+
+        // HideOEMRegistrationScreen / HideOnlineAccountScreens 是 Windows 8 新增的设置
+        // （见官方文「Changed Answer File Settings from Windows 7」）。Windows 7 的组件
+        // 里没有它们，写进去会被安装程序拒收 —— 实测 Win7 SP1 的 setuperr.log：
+        //   "Setting is not defined in this component"（指向 OOBE/HideOEMRegistrationScreen）。
+        // 版本未知（0）时同样不写：漏写只是少隐藏一页，写错是整份文件被拒。
+        if (majorVersion >= 8)
+        {
+            sb.AppendLine("        <HideOEMRegistrationScreen>true</HideOEMRegistrationScreen>");
+            sb.AppendLine("        <HideOnlineAccountScreens>true</HideOnlineAccountScreens>");
+        }
+
         sb.AppendLine("        <HideWirelessSetupInOOBE>true</HideWirelessSetupInOOBE>");
         sb.AppendLine("        <NetworkLocation>Work</NetworkLocation>");
         sb.AppendLine("        <ProtectYourPC>3</ProtectYourPC>");
 
-        // 版本专属节点只在「确认」目标版本时才写：写进目标系统不认识的节点会让安装程序
-        // 拒绝整份文件，而漏写只是少隐藏一个页面。所以版本未知（0）时一律不写。
-        // HideOnlineAccountScreens 是 Win10 起才有的设置。
-        if (majorVersion >= 10)
-        {
-            sb.AppendLine("        <HideOnlineAccountScreens>true</HideOnlineAccountScreens>");
-        }
-
-        // SkipMachineOOBE / SkipUserOOBE 用于跳过 Windows Welcome，只在 Windows 7（及更早）
-        // 上有效；从 Windows 8 起这两个设置已从系统移除，写进去同样会让安装失败。
-        // 缺了它们，Win7 首次开机会真实进入 Windows Welcome 流程。
-        if (majorVersion == 7)
-        {
-            sb.AppendLine("        <SkipMachineOOBE>true</SkipMachineOOBE>");
-            sb.AppendLine("        <SkipUserOOBE>true</SkipUserOOBE>");
-        }
+        // 不再写 SkipMachineOOBE / SkipUserOOBE：它们是已弃用的设置，且 Windows 7 的
+        // 官方自动化文档采用的是「逐页配置即跳过」机制 —— 上面的设置已经覆盖
+        // Windows Welcome 的全部页面（语言/许可/账户/计算机名/保护/时间/位置/无线），
+        // 不需要再冒险使用文档之外的节点。
 
         return sb.ToString().TrimEnd('\r', '\n');
     }

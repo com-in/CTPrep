@@ -7,12 +7,11 @@
       x86 for 32-bit images. A component whose architecture does not exist
       in the image makes Windows Setup reject the whole file.
 
-    - Version-specific OOBE nodes are written only when the target version
-      is known: SkipMachineOOBE / SkipUserOOBE for Windows 7 (they skip the
-      Windows Welcome flow and were removed in Windows 8), and
-      HideOnlineAccountScreens for Windows 10 and later. For an unknown
-      version only the generic nodes are used: a missing node merely leaves
-      an extra OOBE page, an unknown node is fatal.
+    - HideOEMRegistrationScreen and HideOnlineAccountScreens were added in
+      Windows 8, so they are written only for Windows 8 and later. Windows 7
+      gets exactly the settings its own automation reference lists. A node
+      the target does not know makes Windows Setup reject the whole file;
+      a missing one merely leaves an extra OOBE page.
 -->
 <unattend xmlns="urn:schemas-microsoft-com:unattend">
 
