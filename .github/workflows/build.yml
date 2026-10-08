@@ -41,8 +41,12 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 30
     steps:
+      # Pin the job's JavaScript action runtime to Node 24 (see workflow env).
+      - name: Use Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
 
-    steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
