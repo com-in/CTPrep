@@ -95,41 +95,9 @@ public sealed class DismService
                 return WimImageDetail.Unknown;
             }
 
-            var arch = string.Empty;
-            var version = string.Empty;
-            var inDetails = false;
-            foreach (var raw in result.StdOut.Split('\n'))
-            {
-                var line = raw.TrimEnd('\r');
-
-                // 先跳过工具横幅：横幅里自带一行 "Version: <dism 自身版本>"，不能当成映像版本
-                if (!inDetails)
-                {
-                    inDetails = line.Contains("Details for", StringComparison.OrdinalIgnoreCase);
-                    continue;
-                }
-
-                var m = Regex.Match(line, @"^\s*(Architecture|Version)\s*:\s*(.+)$", RegexOptions.IgnoreCase);
-                if (!m.Success)
-                {
-                    continue;
-                }
-
-                var key = m.Groups[1].Value.ToLowerInvariant();
-                var value = m.Groups[2].Value.Trim();
-                if (key == "architecture" && arch.Length == 0)
-                {
-                    arch = value;
-                }
-                else if (key == "version" && version.Length == 0)
-                {
-                    version = value;
-                }
-            }
-
-            var major = MapMajorVersion(version);
-            _log.Info($"映像 {index} 详情：架构 {(arch.Length == 0 ? "未知" : arch)}，版本 {(version.Length == 0 ? "未知" : version)}。");
-            return new WimImageDetail(arch, version, major);
+            var detail = ParseWimDetailText(result.StdOut);
+            _log.Info($"映像 {index} 详情：架构 {(detail.Architecture.Length == 0 ? "未知" : detail.Architecture)}，版本 {(detail.Version.Length == 0 ? "未知" : detail.Version)}。");
+            return detail;
         }
         catch (OperationCanceledException)
         {
@@ -140,6 +108,64 @@ public sealed class DismService
             _log.Warn($"读取映像架构/版本失败：{ex.Message}");
             return WimImageDetail.Unknown;
         }
+    }
+
+    /// <summary>
+    /// 解析 dism /Get-WimInfo /Index 的文本输出（独立成纯函数，便于离线测试）。
+    /// 关键点：dism 横幅自带一行 "Version: ＜dism 自身版本＞"，不能当成映像版本——
+    /// 先用 "Details for" 定位详情区，取详情区第一处 Architecture/Version；
+    /// 万一输出格式变化导致详情区没识别出来，才退回「最后一次出现的值」，
+    /// 且 Version 必须见过 ≥2 行（横幅 1 行 + 映像 1 行）才采用，避免把 dism 自己的版本当映像版本。
+    /// </summary>
+    public static WimImageDetail ParseWimDetailText(string stdout)
+    {
+        var archGated = string.Empty;
+        var versionGated = string.Empty;
+        var archLast = string.Empty;
+        var versionLast = string.Empty;
+        var archCount = 0;
+        var versionCount = 0;
+        var inDetails = false;
+
+        foreach (var raw in (stdout ?? string.Empty).Split('\n'))
+        {
+            var line = raw.TrimEnd('\r');
+            if (!inDetails && line.Contains("Details for", StringComparison.OrdinalIgnoreCase))
+            {
+                inDetails = true;
+            }
+
+            var m = Regex.Match(line, @"^\s*(Architecture|Version)\s*:\s*(.+)$", RegexOptions.IgnoreCase);
+            if (!m.Success)
+            {
+                continue;
+            }
+
+            var key = m.Groups[1].Value.ToLowerInvariant();
+            var value = m.Groups[2].Value.Trim();
+            if (key == "architecture")
+            {
+                archCount++;
+                archLast = value;
+                if (inDetails && archGated.Length == 0)
+                {
+                    archGated = value;
+                }
+            }
+            else
+            {
+                versionCount++;
+                versionLast = value;
+                if (inDetails && versionGated.Length == 0)
+                {
+                    versionGated = value;
+                }
+            }
+        }
+
+        var arch = archGated.Length > 0 ? archGated : archCount >= 1 ? archLast : string.Empty;
+        var version = versionGated.Length > 0 ? versionGated : versionCount >= 2 ? versionLast : string.Empty;
+        return new WimImageDetail(arch, version, MapMajorVersion(version));
     }
 
     /// <summary>把 dism 报告的映像版本号（6.1.7601 / 10.0.22621 …）映射成产品主版本：7 / 8 / 10 / 11；认不出来为 0。</summary>
