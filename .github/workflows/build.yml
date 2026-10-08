@@ -14,6 +14,12 @@ name: build
 on:
   push:
     branches: [main]
+    # The link-sync job commits docs/images.json every ~22 hours. Those commits
+    # must still reach GitHub Pages, so they cannot use [skip ci]; ignoring that
+    # path here keeps them from triggering a 336 MB LFS build for nothing.
+    # A commit touching anything else still builds as usual.
+    paths-ignore:
+      - 'docs/images.json'
   pull_request:
   workflow_dispatch:
 

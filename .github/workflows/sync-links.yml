@@ -7,8 +7,10 @@
 # always keeping at least one hour of margin before the links expire. A failed
 # run is simply retried at the next hourly wake-up.
 #
-# The commit uses [skip ci] on purpose: manifest-only changes must not trigger
-# the build workflow (each build run pulls the 336 MB LFS object).
+# The commit deliberately does NOT use [skip ci]: that flag also skips the
+# GitHub Pages deployment, which is what actually publishes docs/images.json.
+# build.yml ignores manifest-only changes instead (paths-ignore), so a sync
+# commit still refreshes the published manifest without triggering a build.
 #
 # Triggers:
 #   - schedule          : hourly wake-up; syncs only when the manifest is stale
@@ -21,6 +23,9 @@ on:
     - cron: '0 * * * *'
   workflow_dispatch:
   push:
+    # without this a tag push also fires this job, and the checkout then has a
+    # detached HEAD
+    branches: [main]
     paths:
       - .github/workflows/sync-links.yml
 
@@ -57,5 +62,6 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add docs/images.json
-          git commit -m "Sync Microsoft download links [skip ci]"
-          git push
+          git commit -m "Sync Microsoft download links"
+          # push an explicit ref: a tag-triggered checkout has a detached HEAD
+          git push origin HEAD:refs/heads/main
