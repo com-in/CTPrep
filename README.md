@@ -24,11 +24,11 @@ Windows 重装工具。准备阶段在当前系统里运行（WPF 界面，新�
 
 - Windows 10 / 11 x64，需要管理员权限（会修改 BCD 与磁盘分区）；
 - 暂存空间默认 12 GB（`StagingSizeMB` 可调）；
-- 绿色版自包含 .NET 8 运行时，不需要另装。
+- 两种发布版：绿色版自带 .NET 8 运行时；轻量版体积更小，但需要目标机器已装 .NET 8 桌面运行时（Windows Desktop Runtime）。
 
 ## 使用
 
-1. 准备绿色版（自行构建，或从 Actions 页面下载构建产物），整个文件夹一起拷到目标机器，不要只拷 exe；
+1. 准备一份发布版（绿色版或轻量版，见「从源码构建」），整个文件夹一起拷到目标机器，不要只拷 exe；
 2. 以管理员身份运行 `CTPrep.exe`；
 3. 新手模式一路确认即可，或进高级模式调整磁盘、镜像、账户等；
 4. 重启后不用再操作，等它装完。
@@ -46,10 +46,14 @@ Windows 重装工具。准备阶段在当前系统里运行（WPF 界面，新�
 需要 .NET 8 SDK；PE 界面 EXE 已入库，正常构建不需要 Zig。
 
 ```powershell
+# 绿色版：自包含 .NET 8 运行时
 dotnet publish src/CtPrep.App/CtPrep.App.csproj -p:PublishProfile=Green-x64
+
+# 轻量版：依赖目标机器已安装 .NET 8 桌面运行时
+dotnet publish src/CtPrep.App/CtPrep.App.csproj -p:PublishProfile=Lite-x64
 ```
 
-产物在 `publish-green/`（自包含 win-x64，含 PE 资源）。修改 PE 界面、重建 `boot.wim`、字体处理等见 `PE-UPDATE.md`；CI 在每次 push / PR 时自动构建，产物见 Actions 页面。
+两份产物（`publish-green/`、`publish-lite/`）都自带 PE 资源（`runtime/pe`）。修改 PE 界面、重建 `boot.wim`、字体处理等见 `PE-UPDATE.md`；CI 在每次 push / PR 时自动构建，产物见 Actions 页面。
 
 ## 目录
 

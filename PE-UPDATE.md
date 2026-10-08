@@ -97,7 +97,7 @@ PE 界面还会在 `X:\ctprep\ui-font.log` 记录界面实际使用的字体（`
 
 1. `python tools/build-pe-font.py`（跑 PC 版 Python 即可，需要 `pip install fonttools`）。产物是两个**生成物、不入库**的文件：`build/pe-font/CTPrep.Font.ttf`（子集字体，供检查）与 `build/pe-font/font_data.c`（同字节的 C 数组，会被链接进界面）。只在字符集或字体需要重做时跑。
 2. `powershell -NoProfile -ExecutionPolicy Bypass -File tools/build-pe-ui.ps1`（改了 `src/CtPrep.PeUi/main.c` 必须跑；它同时编译 `main.c` 与 `build/pe-font/font_data.c`，缺少字体产物会直接报错并提示先跑第 1 步）
-3. `dotnet publish src/CtPrep.App/CtPrep.App.csproj -p:PublishProfile=Green-x64`
+3. `dotnet publish src/CtPrep.App/CtPrep.App.csproj -p:PublishProfile=Green-x64`（自包含绿色版）；需要目标机器装 .NET 8 桌面运行时的轻量版为 `-p:PublishProfile=Lite-x64`，产物在 `publish-lite`
 
 重建 `runtime\pe\boot.wim`（第 2 步的输入）走 `tools/slim-lightningpe.ps1`，它需要雷电PE 整包里的 `Sources\V1.8-B3.2_NVME.ISO`。仓库内原有的雷电PE 整包 `tools/Lightning PE V1.8-B3.2_NVME.7z`（1.5 GB）已在 10-08 清理时删除，**重建 PE 前需自备该整包**；`boot.wim`（经 Git LFS 入库）与 `boot.sdi` 本身已保留在 `runtime\pe`。注意第 2 步会在项目内重建 `build\zig-cache`（约 500 MB 的 Zig 编译缓存），不需要时可再删。
 

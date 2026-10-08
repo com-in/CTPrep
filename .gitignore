@@ -16,6 +16,7 @@ src/CtPrep.PeUi/bin/*
 # ---------- 发布 / 打包输出 ----------
 /publish/
 /publish-green/
+/publish-lite/
 
 # ---------- 中间产物（字体生成、PE 中间件、测试脚手架等） ----------
 /build/
