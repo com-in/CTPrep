@@ -55,6 +55,10 @@ dotnet publish src/CtPrep.App/CtPrep.App.csproj -p:PublishProfile=Lite-x64
 
 两份产物（`publish-green/`、`publish-lite/`）都自带 PE 资源（`runtime/pe`）。修改 PE 界面、重建 `boot.wim`、字体处理等见 `PE-UPDATE.md`；CI 在每次 push / PR 时自动构建，产物见 Actions 页面。
 
+## 发布
+
+推送形如 `v1.2.3` 的 tag 才会发布 Release，且要求 tag 版本与 csproj 的 `<Version>` 一致、`docs/images.json` 里已有真实镜像地址，否则工作流会在发布前停下。普通提交不会发布。完整规则见 `RELEASE.md`。
+
 ## 目录
 
 ```text

@@ -1,0 +1,262 @@
+# Release pipeline.
+#
+# This is the ONLY workflow that publishes anything. Ordinary pushes and pull
+# requests only run build.yml (compile + upload a short-lived artifact) and
+# never create a release.
+#
+# A release happens only when ALL of the following hold:
+#   1. a tag shaped like v1.2.3 is pushed (or the workflow is started by hand
+#      with an explicit version);
+#   2. that version matches <Version> in src/CtPrep.App/CtPrep.App.csproj;
+#   3. docs/images.json carries at least one real (non-placeholder) image URL,
+#      so the published build can actually fetch an image.
+#
+# If any check fails the run stops before anything is published.
+name: release
+
+on:
+  push:
+    tags:
+      # GitHub tag filters are glob patterns, not regexes, so a loose 'v*' is
+      # used here and the exact x.y.z shape is enforced in the verify job.
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release, for example 1.2.3'
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  # ---------------------------------------------------------------- verify
+  verify:
+    name: Verify release preconditions
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.check.outputs.version }}
+      tag: ${{ steps.check.outputs.tag }}
+      manifest_url: ${{ steps.check.outputs.manifest_url }}
+      image_count: ${{ steps.check.outputs.image_count }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve version
+        id: ver
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            raw="${{ github.event.inputs.version }}"
+            # accept both 1.2.3 and v1.2.3 from the manual form
+            raw="${raw#v}"
+            tag="v${raw}"
+          else
+            tag="${GITHUB_REF_NAME}"
+            raw="${tag#v}"
+          fi
+          if ! printf '%s' "$raw" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::version must be numeric x.y.z (got: $raw)"
+            exit 1
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "version=$raw" >> "$GITHUB_OUTPUT"
+
+      - name: Check version and image manifest
+        id: check
+        env:
+          TAG: ${{ steps.ver.outputs.tag }}
+          VERSION: ${{ steps.ver.outputs.version }}
+        run: |
+          set -euo pipefail
+          echo "tag     : $TAG"
+          echo "version : $VERSION"
+
+          # 1) the tag must agree with the project version
+          csproj="src/CtPrep.App/CtPrep.App.csproj"
+          declared="$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' "$csproj" | head -1)"
+          echo "csproj  : $declared"
+          if [ "$declared" != "$VERSION" ]; then
+            echo "::error::tag $TAG does not match <Version>$declared</Version> in $csproj"
+            echo "::error::bump <Version> first, commit it, then tag the same commit."
+            exit 1
+          fi
+
+          # 2) the image manifest must be publishable
+          python3 - <<'PY'
+          import json, os, re, sys
+
+          path = 'docs/images.json'
+          if not os.path.isfile(path):
+              sys.exit('::error::docs/images.json is missing')
+
+          try:
+              doc = json.load(open(path, encoding='utf-8'))
+          except Exception as exc:
+              sys.exit('::error::docs/images.json is not valid JSON: %s' % exc)
+
+          images = doc.get('images') or {}
+          if not images:
+              sys.exit('::error::docs/images.json has no images section')
+
+          placeholder = ('example.com', 'example.org', '你的存储', 'your-storage', 'TODO')
+          usable = []
+          for name, entry in images.items():
+              url = (entry or {}).get('url', '')
+              if not re.match(r'^https?://', url):
+                  continue
+              if any(p in url for p in placeholder):
+                  continue
+              usable.append(name)
+
+          if not usable:
+              sys.exit('::error::docs/images.json has no real image URL yet '
+                       '(only placeholders). Fill it in before releasing.')
+
+          with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as fh:
+              fh.write('image_count=%d\n' % len(usable))
+          print('usable image entries:', ', '.join(usable))
+          PY
+
+          # 3) where the published build will read the manifest from
+          if [ -f docs/CNAME ]; then
+            domain="$(head -1 docs/CNAME | tr -d '\r\n ')"
+            manifest_url="https://${domain}/images.json"
+          else
+            owner="${GITHUB_REPOSITORY%%/*}"
+            repo="${GITHUB_REPOSITORY##*/}"
+            manifest_url="https://${owner}.github.io/${repo}/images.json"
+          fi
+          echo "manifest: $manifest_url"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "manifest_url=$manifest_url" >> "$GITHUB_OUTPUT"
+
+  # ---------------------------------------------------------------- build
+  build:
+    name: Build ${{ matrix.flavor }}
+    needs: verify
+    runs-on: windows-latest
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - flavor: green
+            profile: Green-x64
+          - flavor: lite
+            profile: Lite-x64
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # boot.wim is an LFS object; without this the build embeds a pointer
+          lfs: true
+
+      - name: Set up .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Publish
+        run: dotnet publish src/CtPrep.App/CtPrep.App.csproj -p:PublishProfile=${{ matrix.profile }}
+
+      - name: Package
+        shell: pwsh
+        run: |
+          $version = "${{ needs.verify.outputs.version }}"
+          $name = "CTPrep-v$version-${{ matrix.flavor }}"
+          $src = "publish-${{ matrix.flavor }}"
+          if (-not (Test-Path "$src\CTPrep.exe")) { throw "publish output missing: $src" }
+          Compress-Archive -Path "$src\*" -DestinationPath "$name.zip" -CompressionLevel Optimal
+          Get-Item "$name.zip" | ForEach-Object { "{0}  {1:N1} MB" -f $_.Name, ($_.Length / 1MB) }
+
+      - name: Upload package
+        uses: actions/upload-artifact@v4
+        with:
+          name: CTPrep-v${{ needs.verify.outputs.version }}-${{ matrix.flavor }}
+          path: CTPrep-v${{ needs.verify.outputs.version }}-${{ matrix.flavor }}.zip
+          if-no-files-found: error
+
+  # ---------------------------------------------------------------- release
+  release:
+    name: Create GitHub release
+    needs: [verify, build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download packages
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.verify.outputs.tag }}
+          VERSION: ${{ needs.verify.outputs.version }}
+          MANIFEST_URL: ${{ needs.verify.outputs.manifest_url }}
+          IMAGE_COUNT: ${{ needs.verify.outputs.image_count }}
+        run: |
+          set -euo pipefail
+          ls -la dist
+
+          cat > notes.md <<EOF
+          ## CTPrep v${VERSION}
+
+          ### 下载
+
+          | 文件 | 说明 |
+          | --- | --- |
+          | \`CTPrep-v${VERSION}-green.zip\` | 绿色版，自带 .NET 8 运行时 |
+          | \`CTPrep-v${VERSION}-lite.zip\` | 轻量版，需先安装 .NET 8 桌面运行时（Windows Desktop Runtime x64） |
+
+          解压后整个文件夹一起用，不要只取 \`CTPrep.exe\`。
+
+          ### 镜像清单地址
+
+          程序从这个地址取镜像与 PE 的下载链接：
+
+          \`\`\`
+          ${MANIFEST_URL}
+          \`\`\`
+
+          本次发布包含 ${IMAGE_COUNT} 个可用镜像条目。要换成自己的镜像源，修改 \`docs/images.json\` 后重新发布即可，程序不需要改动。
+
+          ### 使用
+
+          以管理员身份运行 \`CTPrep.exe\`。重装会清除目标分区数据，操作前先备份。
+          EOF
+
+          # fail loudly if the tag already has a release
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "::error::release $TAG already exists"
+            exit 1
+          fi
+
+          # A manual run has no tag yet: create it on the current commit first.
+          # (When triggered by a tag push it is already there.)
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git ls-remote --exit-code --tags origin "$TAG" >/dev/null 2>&1; then
+            echo "tag $TAG already on remote"
+          else
+            git tag "$TAG"
+            git push origin "$TAG"
+            echo "created tag $TAG"
+          fi
+
+          gh release create "$TAG" \
+            --title "CTPrep v${VERSION}" \
+            --notes-file notes.md \
+            dist/*.zip
+
+          echo "released $TAG"
