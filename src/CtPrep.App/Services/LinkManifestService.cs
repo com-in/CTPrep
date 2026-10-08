@@ -74,6 +74,33 @@ public sealed class LinkManifestService
         return entry;
     }
 
+    /// <summary>
+    /// 列出清单里可选的镜像版本（排除 "Default" 回退项），供新手模式「安装其他系统」展示。
+    /// 同一次运行内按 URL 缓存，只发一次请求。
+    /// </summary>
+    public async Task<IReadOnlyList<string>> ListImageKeysAsync(string manifestUrl, CancellationToken ct)
+    {
+        var manifest = await LoadAsync(manifestUrl, ct).ConfigureAwait(false);
+        var keys = manifest.Images.Keys
+            .Where(k => !k.Equals("Default", StringComparison.OrdinalIgnoreCase))
+            .OrderByDescending(k => k)
+            .ToList();
+        return keys;
+    }
+
+    /// <summary>按给定版本键直接取镜像条目（不按本机版本匹配），用于新手模式选装其它系统。</summary>
+    public async Task<ManifestEntry> ResolveImageByKeyAsync(string manifestUrl, string key, CancellationToken ct)
+    {
+        var manifest = await LoadAsync(manifestUrl, ct).ConfigureAwait(false);
+        if (!manifest.Images.TryGetValue(key, out var entry) || string.IsNullOrWhiteSpace(entry.Url))
+        {
+            throw new InvalidOperationException(T("Msg.ManifestNoImage", key));
+        }
+
+        LogResolved("Msg.ManifestImageResolved", entry);
+        return entry;
+    }
+
     private void LogResolved(string key, ManifestEntry entry)
     {
         _log.Info(T(key, entry.Url));

@@ -16,6 +16,12 @@ public sealed class DeployOptions
     /// <summary>镜像的 SHA256（可空）。</summary>
     public string ImageSha256 { get; set; } = string.Empty;
 
+    /// <summary>
+    /// 选装其它系统时，用来在确认框里显示的友好版本名（例如 "Windows 10"）。
+    /// 留空时确认框直接显示镜像地址；设置后显示这个名字而不是一长串下载 URL。
+    /// </summary>
+    public string? UserImageLabel { get; set; }
+
     /// <summary>要安装的映像索引（1 起）；0 表示未指定，由程序按规则自动挑选。</summary>
     public int ImageIndex { get; set; }
 

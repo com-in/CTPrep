@@ -31,9 +31,36 @@
                                        Text="{loc:Loc Novice.Warning}" />
                         </Border>
 
-                        <Button Content="{loc:Loc Novice.Start}" Style="{StaticResource PrimaryButton}"
-                                Command="{Binding OneClickCommand}"
-                                HorizontalAlignment="Center" Margin="0,24,0,0" MinWidth="220" />
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,24,0,0">
+                            <Button Content="{loc:Loc Novice.Start}" Style="{StaticResource PrimaryButton}"
+                                    Command="{Binding OneClickCommand}" MinWidth="220" />
+                            <Button Content="{loc:Loc Novice.Other}" Style="{StaticResource SecondaryButton}"
+                                    Command="{Binding PickOtherImageCommand}" Margin="10,0,0,0"
+                                    Padding="12,6" />
+                        </StackPanel>
+
+                        <!-- 安装其他系统：从清单拉出的版本列表，选了之后覆盖本机自动匹配 -->
+                        <StackPanel HorizontalAlignment="Center" Margin="0,14,0,0" MaxWidth="520">
+                            <StackPanel.Style>
+                                <Style TargetType="StackPanel">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding NoviceVersionsVisible}" Value="False">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </StackPanel.Style>
+                            <TextBlock Style="{StaticResource HintText}" Text="{loc:Loc Novice.PickVersion}"
+                                       HorizontalAlignment="Center" />
+                            <ComboBox ItemsSource="{Binding NoviceVersions}"
+                                      SelectedItem="{Binding NoviceSelectedVersion}"
+                                      DisplayMemberPath="." MinWidth="240"
+                                      HorizontalAlignment="Center" Margin="0,6,0,0" />
+                            <Button Content="{loc:Loc Novice.ResetVersion}"
+                                    Style="{StaticResource SecondaryButton}"
+                                    Command="{Binding ResetVersionCommand}" Margin="0,8,0,0"
+                                    Padding="10,4" HorizontalAlignment="Center" />
+                        </StackPanel>
 
                         <!-- 可选：直接用本地镜像，跳过下载 -->
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,14,0,0">

@@ -57,6 +57,8 @@ public sealed class MainViewModel : ObservableObject
         BrowseImageCommand = new RelayCommand(BrowseImageAsync, () => !IsBusy);
         BrowseNoviceImageCommand = new RelayCommand(BrowseNoviceImageAsync, () => !IsBusy);
         ClearNoviceImageCommand = new RelayCommand(ClearNoviceImageAsync, () => !IsBusy);
+        PickOtherImageCommand = new RelayCommand(PickOtherImageAsync, () => !IsBusy && !IsLoadingVersions);
+        ResetVersionCommand = new RelayCommand(ResetVersionAsync, () => !IsBusy);
         CancelRebootCommand = new RelayCommand(CancelRebootAsync);
 
         _rebootTimer = new System.Windows.Threading.DispatcherTimer
@@ -275,11 +277,63 @@ public sealed class MainViewModel : ObservableObject
     public string NoviceHint =>
         HasNoviceImageFile
             ? T("Novice.HintLocal") + "\n" + NoviceImageFile
-            : T("Novice.HintAuto");
+            : !string.IsNullOrEmpty(_noviceSelectedVersion)
+                ? T("Novice.HintVersion", _noviceSelectedVersion)
+                : T("Novice.HintAuto");
+
+    /// <summary>「安装其他系统」从清单拉出的可选版本名列表。</summary>
+    private readonly ObservableCollection<string> _noviceVersions = new();
+
+    public ObservableCollection<string> NoviceVersions => _noviceVersions;
+
+    /// <summary>
+    /// 新手模式选装的其他系统版本（清单里的版本键）。为空表示仍按本机当前版本自动匹配。
+    /// 设值时清掉本地镜像选择：二者只能选其一。
+    /// </summary>
+    private string? _noviceSelectedVersion;
+
+    public string? NoviceSelectedVersion
+    {
+        get => _noviceSelectedVersion;
+        set
+        {
+            if (SetProperty(ref _noviceSelectedVersion, value))
+            {
+                if (!string.IsNullOrEmpty(value))
+                {
+                    NoviceImageFile = string.Empty;
+                }
+
+                OnPropertyChanged(nameof(NoviceHint));
+            }
+        }
+    }
+
+    private bool _noviceVersionsVisible;
+    public bool NoviceVersionsVisible
+    {
+        get => _noviceVersionsVisible;
+        set => SetProperty(ref _noviceVersionsVisible, value);
+    }
+
+    private bool _isLoadingVersions;
+    public bool IsLoadingVersions
+    {
+        get => _isLoadingVersions;
+        set
+        {
+            if (SetProperty(ref _isLoadingVersions, value))
+            {
+                (PickOtherImageCommand as RelayCommand)?.RaiseCanExecuteChanged();
+            }
+        }
+    }
 
     public ICommand OneClickCommand { get; }
     public ICommand BrowseNoviceImageCommand { get; }
     public ICommand ClearNoviceImageCommand { get; }
+    public ICommand PickOtherImageCommand { get; }
+    public ICommand ResetVersionCommand { get; }
 
     private Task BrowseNoviceImageAsync()
     {
@@ -287,6 +341,14 @@ public sealed class MainViewModel : ObservableObject
         if (string.IsNullOrEmpty(file))
         {
             return Task.CompletedTask;
+        }
+
+        // 选了本地镜像就取消「安装其他系统」的选择：两种来源只能选其一
+        if (!string.IsNullOrEmpty(_noviceSelectedVersion))
+        {
+            _noviceSelectedVersion = null;
+            OnPropertyChanged(nameof(NoviceSelectedVersion));
+            OnPropertyChanged(nameof(NoviceHint));
         }
 
         NoviceImageFile = file;
@@ -303,6 +365,59 @@ public sealed class MainViewModel : ObservableObject
 
         NoviceImageFile = string.Empty;
         _log.Info(T("Msg.LocalImageCleared"));
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// 「安装其他系统」：从配置的镜像清单里拉出版本列表展示。配置的系统镜像必须是链接清单（.json）；
+    /// 直接给 ISO 地址的配置列不出版本，会提示用户。
+    /// </summary>
+    private async Task PickOtherImageAsync()
+    {
+        var url = _config.DefaultImage?.Url;
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            StatusText = T("Msg.NoImage", "?");
+            return;
+        }
+
+        if (!LinkManifestService.IsManifestUrl(url))
+        {
+            StatusText = T("Msg.ImageSourceNotManifest");
+            return;
+        }
+
+        IsLoadingVersions = true;
+        StatusText = T("Novice.LoadingVersions");
+        try
+        {
+            var keys = await _manifests.ListImageKeysAsync(url, CancellationToken.None).ConfigureAwait(true);
+            _noviceVersions.Clear();
+            foreach (var key in keys)
+            {
+                _noviceVersions.Add(key);
+            }
+
+            NoviceVersionsVisible = _noviceVersions.Count > 0;
+            StatusText = _noviceVersions.Count > 0
+                ? T("Novice.PickVersion")
+                : T("Msg.ManifestNoImage", url);
+        }
+        catch (Exception ex)
+        {
+            NoviceVersionsVisible = false;
+            _log.Warn(T("Msg.ManifestFetchFailed", ex.Message));
+            StatusText = T("Msg.ManifestFetchFailed", ex.Message);
+        }
+        finally
+        {
+            IsLoadingVersions = false;
+        }
+    }
+
+    private Task ResetVersionAsync()
+    {
+        NoviceSelectedVersion = null;
         return Task.CompletedTask;
     }
 
@@ -341,7 +456,18 @@ public sealed class MainViewModel : ObservableObject
             var imageSha = localImage.Length == 0 ? image?.Sha256 ?? string.Empty : string.Empty;
             if (localImage.Length == 0 && LinkManifestService.IsManifestUrl(imageUrl))
             {
-                var resolvedImage = await _manifests.ResolveImageAsync(imageUrl, system, ct).ConfigureAwait(true);
+                ManifestEntry resolvedImage;
+                if (!string.IsNullOrEmpty(_noviceSelectedVersion))
+                {
+                    // 新手模式选装其它系统：直接用选中的版本键，不再按本机版本匹配
+                    resolvedImage = await _manifests
+                        .ResolveImageByKeyAsync(imageUrl, _noviceSelectedVersion, ct).ConfigureAwait(true);
+                }
+                else
+                {
+                    resolvedImage = await _manifests.ResolveImageAsync(imageUrl, system, ct).ConfigureAwait(true);
+                }
+
                 imageUrl = resolvedImage.Url;
                 imageSha = resolvedImage.Sha256;
             }
@@ -369,6 +495,8 @@ public sealed class MainViewModel : ObservableObject
                 TargetLabel = _config.TargetLabel,
                 DryRun = _config.DryRun,
                 RebootAfterPrepare = true,
+                // 新手模式选装其它系统：把选中的版本名记下来，确认框里显示它而不是地址
+                UserImageLabel = string.IsNullOrEmpty(_noviceSelectedVersion) ? null : _noviceSelectedVersion,
             };
             options.DriverSources.AddRange(_config.DriverSources);
 
@@ -1083,10 +1211,13 @@ public sealed class MainViewModel : ObservableObject
         }
 
         var imageSource = options.ImageSource.Trim();
+        var imageDisplay = !string.IsNullOrWhiteSpace(options.UserImageLabel)
+            ? options.UserImageLabel
+            : imageSource;
         targetLines.Add(new ConfirmLine(
             options.UserSuppliedImage
-                ? T("Confirm2.ImageLocal", imageSource)
-                : T("Confirm2.ImageOnline", imageSource)));
+                ? T("Confirm2.ImageLocal", imageDisplay)
+                : T("Confirm2.ImageOnline", imageDisplay)));
 
         // 账户名是这里唯一"程序替你决定"的东西（沿用原系统用户名）。写出来，
         // 免得装完进系统才发现名字被换成了默认名。
@@ -1352,5 +1483,9 @@ public sealed class MainViewModel : ObservableObject
         (BrowseImageCommand as RelayCommand)?.RaiseCanExecuteChanged();
         (BrowseNoviceImageCommand as RelayCommand)?.RaiseCanExecuteChanged();
         (ClearNoviceImageCommand as RelayCommand)?.RaiseCanExecuteChanged();
+        // 这两个按钮的 can-execute 也含 !IsBusy（PickOtherImage 还含 !IsLoadingVersions），
+        // 漏掉会让部署/拉取期间仍可点击。
+        (PickOtherImageCommand as RelayCommand)?.RaiseCanExecuteChanged();
+        (ResetVersionCommand as RelayCommand)?.RaiseCanExecuteChanged();
     }
 }
