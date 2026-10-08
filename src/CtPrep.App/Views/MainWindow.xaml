@@ -131,12 +131,13 @@
                                         <ColumnDefinition Width="{StaticResource LabelColumn}" />
                                         <ColumnDefinition Width="*" />
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Text="{loc:Loc Install.Disk}" Style="{StaticResource LabelText}" />
-                                    <ComboBox Grid.Column="1" ItemsSource="{Binding TargetDiskOptions}"
-                                              SelectedItem="{Binding SelectedTargetDisk}"
+                                    <TextBlock Text="{loc:Loc Install.Partition}" Style="{StaticResource LabelText}" />
+                                    <ComboBox Grid.Column="1" ItemsSource="{Binding TargetPartitionOptions}"
+                                              SelectedItem="{Binding SelectedTargetPartition}"
                                               DisplayMemberPath="Display"
                                               IsEnabled="{Binding IsNotBusy}"
-                                              ToolTip="{loc:Loc Install.DiskTooltip}" />
+                                              MaxDropDownHeight="300"
+                                              ToolTip="{loc:Loc Install.PartitionTooltip}" />
                                 </Grid>
 
                                 <!-- 选了非系统盘时的警示：该磁盘会被整盘重建 -->

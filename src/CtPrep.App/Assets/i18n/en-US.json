@@ -1,11 +1,8 @@
 {
   "Language.Name": "English",
-
   "App.Title": "CTPrep - Windows Reinstall Tool",
-
   "Tab.Novice": "Easy mode",
   "Tab.Advanced": "Advanced",
-
   "Novice.Title": "One-click reinstall",
   "Novice.Warning": "Reinstalling wipes drive C. Back up the files you want to keep to a USB drive or another disk before you start.",
   "Novice.Start": "Start reinstall",
@@ -14,7 +11,6 @@
   "Novice.Clear": "Clear",
   "Novice.HintAuto": "Start reinstall needs nothing else from you: it detects this PC's edition, downloads the image and WinPE, then reboots into WinPE to install Windows unattended and set up the drivers.\nAn internet connection is required; keep the PC plugged in.",
   "Novice.HintLocal": "A local image is selected, so no image download is needed. WinPE is still downloaded.",
-
   "Info.Title": "This computer",
   "Info.Refresh": "Re-detect",
   "Info.OpenDir": "Open folder",
@@ -34,7 +30,6 @@
   "Target.ModeKeepFiles": "Keep files",
   "Target.DryRun": "Dry run",
   "Target.Real": "Live run",
-
   "Image.Title": "Image source",
   "Image.Url": "Image address",
   "Image.Local": "Local image file",
@@ -42,15 +37,8 @@
   "Image.Browse": "Browse",
   "Image.Analyze": "Analyze",
   "Image.Edition": "Edition",
-
   "Install.Title": "Install mode",
-  "Install.Disk": "Target disk",
-  "Install.DiskTooltip": "Choose which disk Windows is installed to. Picking a disk other than the system disk clears and rebuilds that disk completely.",
-  "Install.DiskAuto": "Automatic (system disk)",
-  "Install.DiskAutoNamed": "Automatic (system disk: {0})",
-  "Install.DiskItem": "Disk {0} · {1} · {2}",
-  "Install.DiskSystem": "system disk",
-  "Install.CrossDiskHint": "The target disk is not the current system disk: every partition on {0} will be deleted and rebuilt as the new system disk. The current system keeps its data, but the PC boots from the new disk afterwards.",
+  "Install.CrossDiskHint": "The target disk is not the current system disk: every partition on disk {0} will be deleted and recreated, and Windows is installed there. The current system keeps its data, but the PC boots from this disk afterwards.",
   "Install.Clean": "Clean install (format the target partition, recommended)",
   "Install.Wipe": "Rebuild the whole disk (delete all partitions on the target disk and repartition)",
   "Install.FormatBoot": "Format the boot partition (clears old boot entries)",
@@ -58,7 +46,6 @@
   "Install.Index": "Image index",
   "Install.IndexTooltip": "0 = automatic: an online image matches this PC's edition, falling back to Professional; a local multi-edition image opens a picker.",
   "Install.StagingSize": "Staging (MB)",
-
   "Unattend.Title": "Unattended setup",
   "Unattend.Enable": "Enable unattended setup (skip OOBE, create a local account)",
   "Unattend.BypassNro": "Skip the Windows 11 network requirement (BypassNRO)",
@@ -70,21 +57,17 @@
   "Unattend.TimeZoneTooltip": "Sorted by UTC offset; type to search.",
   "Unattend.DisableDefender": "Disable Windows Defender",
   "Unattend.DisableDefenderTooltip": "Writes the disable policies and stops the related services before the first sign-in. Recent Windows builds may restore it via tamper protection; confirm in Windows afterwards if needed.",
-
   "Drivers.Title": "Driver packages",
   "Drivers.Hint": "One per line: local folder / .zip / .exe / download URL",
-
   "Behavior.Title": "Behaviour",
   "Behavior.Reboot": "Reboot into WinPE automatically when preparation finishes",
   "Behavior.Shutdown": "Shut down after deployment (reboots by default)",
   "Behavior.DryRun": "Dry run (print the commands only, never touch disks or boot config)",
   "Behavior.Language": "Language",
-
   "Action.Cancel": "Cancel task",
   "Action.CancelReboot": "Cancel reboot",
   "Action.Deploy": "Prepare and run",
   "Log.Title": "Log",
-
   "Status.Ready": "Ready",
   "Status.Detecting": "Detecting this computer...",
   "Status.Detected": "Detection finished.",
@@ -98,17 +81,14 @@
   "Status.RebootCountdown": "Rebooting into WinPE in {0} s",
   "Status.RebootCancelled": "Automatic reboot cancelled.",
   "Status.RebootCancelFailed": "Could not cancel the reboot. Run shutdown /a manually.",
-
   "Dialog.PickImageTitle": "Select a Windows image file",
   "Dialog.ErrorTitle": "Error",
   "Dialog.Cancel": "Cancel",
   "Dialog.ConfirmOk": "OK",
   "Dialog.ConfirmWait": "OK ({0})",
-
   "Confirm1.Title": "Confirm your backup",
   "Confirm1.Line1": "Reinstalling deletes everything on drive C (Desktop, Documents, Downloads and so on).",
   "Confirm1.Line2": "Back up the files you want to keep to a USB drive or another disk first.",
-
   "Confirm2.Title": "Confirm the target",
   "Confirm2.Target": "Target: {0}",
   "Confirm2.ModeClean": "Mode: clean install (format the target partition)",
@@ -120,18 +100,15 @@
   "Confirm2.ImageLocal": "Windows image: local file {0}",
   "Confirm2.ImageOnline": "Windows image: downloaded from {0}",
   "Confirm2.Account": "User account: {0}",
-
   "Confirm3.Title": "Confirm to start",
   "Confirm3.Real": "Disks and boot configuration are rewritten and this cannot be undone automatically.",
   "Confirm3.DryRun": "Dry run: nothing on the disks changes.",
   "Confirm3.Reboot": "The PC reboots into WinPE 10 seconds after preparation; you can cancel during the countdown.",
-
   "Edition.Title": "Select the edition to install",
   "Edition.Header": "Select the edition to install",
   "Edition.Hint": "The image contains multiple editions. Please select the one to install.",
   "Edition.Cancel": "Cancel",
   "Edition.Confirm": "Install this edition",
-
   "Msg.NoviceCancelled": "Reinstall cancelled by the user.",
   "Msg.NoPe": "config.ini has no usable WinPE download address in its [PE] section.",
   "Msg.NoImage": "config.ini has no image address matching {0} in its [Image] section, and no Default fallback.\nClick \"Select a local image\" to point at a .iso / .wim / .esd file instead.",
@@ -164,9 +141,7 @@
   "Msg.StagingOnTargetDisk": "Rebuilding the whole disk converts disk {0} from {1} to {2}, but the staging partition also lives on that disk, so the conversion would delete the staged data as well.\nConvert the system disk to the target partition table with another tool first, or leave a large enough NTFS partition on a different disk.",
   "Msg.DiskTooLargeForMbr": "The target disk {0} (about {1} TB) exceeds 2 TB, which MBR cannot address. Choose \"Rebuild the whole disk\" in Advanced to use GPT instead.",
   "Msg.TargetDiskGone": "The selected target disk (disk {0}) no longer exists. Click \"Re-detect\" to refresh the disk list and try again.",
-  "Msg.DiskSelectionReset": "The previously selected target disk (disk {0}) no longer exists; falling back to automatic selection.",
   "Msg.CrossDiskChosen": "A disk other than the system disk is used as the target: {0}. It will be rebuilt completely.",
-
   "Msg.RunOnCDriveTitle": "Run CTPrep from a drive other than C:",
   "Msg.RunOnCDriveBody": "CTPrep is running from drive C.\n\nThe system partition is shrunk and formatted during reinstallation, so a copy on C: can be locked, break the deployment or leave broken partitions behind.\n\nCopy the whole CTPrep folder to another partition (for example D:\\CTPrep) and run it from there.\n\nCurrent folder: {0}",
   "Msg.StartupFailedTitle": "CTPrep failed to start",
@@ -175,7 +150,6 @@
   "Msg.NoEditionSelected": "No edition was selected, so the deployment was cancelled.",
   "Msg.EditionIndexMissing": "The selected image index {0} is not present in this image.",
   "Msg.NoImageIndex": "This image contains no usable image index.",
-
   "Msg.ManifestFetching": "Fetching the link manifest: {0}",
   "Msg.ManifestInvalid": "Invalid link manifest ({0}): {1}",
   "Msg.ManifestNoImage": "The link manifest has no image matching this PC ({0}) and no Default fallback.",
@@ -183,5 +157,18 @@
   "Msg.ManifestImageResolved": "Image address resolved from the link manifest: {0}",
   "Msg.ManifestPeResolved": "WinPE address resolved from the link manifest: {0}",
   "Msg.ManifestNoSha": "The link manifest entry has no sha256; the integrity check will be skipped.",
-  "Msg.FetchTextTooLarge": "The remote text file is too large (over {0} KB); download stopped."
+  "Msg.FetchTextTooLarge": "The remote text file is too large (over {0} KB); download stopped.",
+  "Install.Partition": "Install location",
+  "Install.PartitionAuto": "Automatic (current system partition)",
+  "Install.PartitionAutoNamed": "Automatic (current system partition: {0})",
+  "Install.PartitionItem": "Disk {0} partition {1} · {2} · {3}",
+  "Install.PartitionEsp": "EFI system partition",
+  "Install.PartitionReserved": "System reserved",
+  "Install.PartitionCurrent": "Current system",
+  "Install.NoLetter": "no letter",
+  "Install.PartitionTooltip": "Which partition Windows goes on. Defaults to the current Windows partition; picking a partition on another disk rebuilds that whole disk.",
+  "Msg.PartitionSelectionReset": "The previously selected partition {0} no longer exists; falling back to Automatic.",
+  "Msg.TargetPartitionGone": "Partition {1} was not found on disk {0}. Re-detect and choose again.",
+  "Msg.TargetPartitionIsBoot": "Partition {1} on disk {0} is a boot partition and cannot be the install target.",
+  "Msg.NoEspOnTargetDisk": "Disk {0} has no EFI system partition, so the boot files cannot be written. Enable the whole-disk rebuild to create one."
 }

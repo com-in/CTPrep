@@ -335,11 +335,6 @@ public sealed class DeployOrchestrator
     /// </summary>
     public async Task FillTargetAsync(DeployOptions options, CancellationToken ct = default)
     {
-        if (options.TargetPartitionNumber > 0)
-        {
-            return;
-        }
-
         var systemDrive = _storage.GetSystemDriveLetter();
         var disks = await _storage.GetDisksAsync(ct).ConfigureAwait(false);
         options.Firmware = _systemInfoService.GetFirmware();
@@ -363,30 +358,65 @@ public sealed class DeployOrchestrator
                 (p.IsSystem && !p.DriveLetter.Equals(systemDrive, StringComparison.OrdinalIgnoreCase)))?.PartitionNumber ?? 0;
         }
 
-        // ---------- 跨盘安装：目标磁盘整盘重建 ----------
-        if (options.TargetDiskNumber >= 0 && options.TargetDiskNumber != source.DiskNumber)
+        // ---------- 用户在高级设置里明确选了安装分区 ----------
+        if (options.TargetDiskNumber >= 0 && options.TargetPartitionNumber > 0)
         {
             var target = disks.FirstOrDefault(d => d.DiskNumber == options.TargetDiskNumber)
                 ?? throw new InvalidOperationException(T("Msg.TargetDiskGone", options.TargetDiskNumber));
-
-            var scheme = options.Firmware == FirmwareType.Uefi
-                ? PartitionScheme.WipeDiskGpt
-                : PartitionScheme.WipeDiskMbr;
-
-            // 2TB 以上的磁盘放不下 MBR 分区表，BIOS 机器只能换盘或改用 UEFI
-            CheckMbrCapacity(target, scheme);
+            var partition = target.Partitions.FirstOrDefault(p => p.PartitionNumber == options.TargetPartitionNumber)
+                ?? throw new InvalidOperationException(
+                    T("Msg.TargetPartitionGone", options.TargetDiskNumber, options.TargetPartitionNumber));
 
             options.TargetDiskStyle = target.PartitionStyle;
             options.TargetDiskPartitionNumbers.Clear();
             options.TargetDiskPartitionNumbers.AddRange(target.Partitions.Select(p => p.PartitionNumber));
-            options.PartitionScheme = scheme;
-            // 整盘重建会新建引导分区，无需引用旧分区号
-            options.TargetPartitionNumber = 0;
-            options.EspPartitionNumber = 0;
-            options.SystemReservedPartitionNumber = 0;
 
-            _log.Info($"目标（整盘重建）：{target}");
-            _log.Info($"系统盘（保持不动）：{source}");
+            if (options.PartitionScheme != PartitionScheme.KeepExisting)
+            {
+                // 整盘重建：目标磁盘被清空重建，分区号由 diskpart 重新分配
+                var scheme = options.Firmware == FirmwareType.Uefi
+                    ? PartitionScheme.WipeDiskGpt
+                    : PartitionScheme.WipeDiskMbr;
+
+                // 2TB 以上的磁盘放不下 MBR 分区表，BIOS 机器只能换盘或改用 UEFI
+                CheckMbrCapacity(target, scheme);
+
+                options.PartitionScheme = scheme;
+                options.TargetPartitionNumber = 0;
+                options.EspPartitionNumber = 0;
+                options.SystemReservedPartitionNumber = 0;
+
+                _log.Info($"目标（整盘重建）：{target}");
+                return;
+            }
+
+            // 保留磁盘上的其它分区，只把选定分区作为安装目标。
+            // 选了引导分区本身（ESP / 系统保留）没有意义，这里直接挡掉。
+            if (partition.IsEsp ||
+                partition.Type.Equals("Reserved", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException(
+                    T("Msg.TargetPartitionIsBoot", options.TargetDiskNumber, options.TargetPartitionNumber));
+            }
+
+            if (options.Firmware == FirmwareType.Uefi)
+            {
+                options.EspPartitionNumber = target.Partitions.FirstOrDefault(p => p.IsEsp)?.PartitionNumber ?? 0;
+                if (options.EspPartitionNumber == 0)
+                {
+                    // 没有 ESP 就没法把引导写进去，bcdboot 必然失败
+                    throw new InvalidOperationException(T("Msg.NoEspOnTargetDisk", target.DiskNumber));
+                }
+            }
+            else
+            {
+                options.SystemReservedPartitionNumber = target.Partitions.FirstOrDefault(p =>
+                    p.Type.Equals("Reserved", StringComparison.OrdinalIgnoreCase) ||
+                    (p.IsSystem && p.PartitionNumber != options.TargetPartitionNumber))?.PartitionNumber ?? 0;
+            }
+
+            _log.Info($"目标：磁盘 {target.DiskNumber} 分区 {options.TargetPartitionNumber}（{partition.SizeText}）");
+            _log.Info($"引导分区号 {(options.Firmware == FirmwareType.Uefi ? options.EspPartitionNumber : options.SystemReservedPartitionNumber)}，固件 {options.Firmware}");
             return;
         }
 

@@ -109,8 +109,8 @@ public sealed class MainViewModel : ObservableObject
             LocalizationService.Current.SetLanguage(value);
             LocalizationService.Save(_config.RuntimeDir, value);
 
-            // 磁盘下拉项的显示文本是本地化拼出来的，跟随语言重建
-            RebuildTargetDiskOptions();
+            // 安装位置下拉项的显示文本是本地化拼出来的，跟随语言重建
+            RebuildTargetPartitionOptions();
 
             // null 会让 WPF 重新读取所有绑定，语言切换后界面一次性刷新
             OnPropertyChanged(null);
@@ -482,7 +482,7 @@ public sealed class MainViewModel : ObservableObject
     /// <summary>整盘重建时「全新安装」由上面的选项决定，不允许再改（避免出现矛盾的组合）。</summary>
     public bool ExpertCleanInstallEnabled => !_expertWipeDisk;
 
-    // ---------------------------------------------------------------- 目标磁盘
+    // ---------------------------------------------------------------- 安装位置（分区）
 
     /// <summary>最近一次检测到的磁盘列表（用于构建下拉框与判断系统盘）。</summary>
     private IReadOnlyList<DiskInfo> _disks = Array.Empty<DiskInfo>();
@@ -490,45 +490,49 @@ public sealed class MainViewModel : ObservableObject
     /// <summary>系统盘所在磁盘号（-1 表示尚未检测到）。</summary>
     private int _sourceDiskNumber = -1;
 
-    /// <summary>因选择非系统盘而强制勾选「整盘重建」时，记住用户原来的选择，切回自动时恢复。</summary>
+    /// <summary>当前 Windows 所在分区号（0 表示尚未检测到）。</summary>
+    private int _sourcePartitionNumber;
+
+    /// <summary>因选择了非系统盘上的分区而强制勾选「整盘重建」时，记住用户原来的选择，切回自动时恢复。</summary>
     private bool _wipeForcedByCrossDisk;
     private bool _wipeRememberedByCrossDisk;
     private bool _cleanRememberedByCrossDisk;
 
     /// <summary>重建下拉框期间抑制选中项的副作用处理。</summary>
-    private bool _rebuildingDiskOptions;
+    private bool _rebuildingPartitionOptions;
 
-    public ObservableCollection<TargetDiskOption> TargetDiskOptions { get; } = new();
+    public ObservableCollection<TargetPartitionOption> TargetPartitionOptions { get; } = new();
 
-    private TargetDiskOption? _selectedTargetDisk;
-    public TargetDiskOption? SelectedTargetDisk
+    private TargetPartitionOption? _selectedTargetPartition;
+    public TargetPartitionOption? SelectedTargetPartition
     {
-        get => _selectedTargetDisk;
+        get => _selectedTargetPartition;
         set
         {
-            if (!SetProperty(ref _selectedTargetDisk, value))
+            if (!SetProperty(ref _selectedTargetPartition, value))
             {
                 return;
             }
 
-            if (!_rebuildingDiskOptions)
+            if (!_rebuildingPartitionOptions)
             {
-                ApplyTargetDiskSelection();
+                ApplyTargetPartitionSelection();
             }
         }
     }
 
-    /// <summary>是否选择了「非系统盘」作为安装目标（会强制整盘重建该磁盘）。</summary>
+    /// <summary>是否选择了「非系统盘上的分区」作为安装目标（该磁盘会被整盘重建）。</summary>
     public bool IsCrossDiskTarget =>
-        _selectedTargetDisk is not null &&
-        _selectedTargetDisk.DiskNumber >= 0 &&
+        _selectedTargetPartition is not null &&
+        !_selectedTargetPartition.IsAuto &&
         _sourceDiskNumber >= 0 &&
-        _selectedTargetDisk.DiskNumber != _sourceDiskNumber;
+        _selectedTargetPartition.DiskNumber != _sourceDiskNumber;
 
-    /// <summary>选择非系统盘时的红色提示文案；其余情况为空。</summary>
+    /// <summary>选择非系统盘上的分区时的红色提示文案；其余情况为空。</summary>
     public string CrossDiskHint =>
-        IsCrossDiskTarget && _selectedTargetDisk is not null
-            ? T("Install.CrossDiskHint", _selectedTargetDisk.Display)
+        IsCrossDiskTarget && _selectedTargetPartition is not null
+            // 提示说的是「整块磁盘会被重建」，所以这里报磁盘号，不是分区名
+            ? T("Install.CrossDiskHint", _selectedTargetPartition.DiskNumber)
             : string.Empty;
 
     /// <summary>整盘重建会把全部分区（含引导分区）重建，不能再改这个开关。</summary>
@@ -552,59 +556,92 @@ public sealed class MainViewModel : ObservableObject
     }
 
     /// <summary>用检测到的磁盘列表重建下拉框；语言切换、重新检测后都会调用。</summary>
-    private void RebuildTargetDiskOptions()
+    private void RebuildTargetPartitionOptions()
     {
-        _rebuildingDiskOptions = true;
+        _rebuildingPartitionOptions = true;
         try
         {
-            var previous = _selectedTargetDisk?.DiskNumber ?? -1;
-            TargetDiskOptions.Clear();
+            var previousDisk = _selectedTargetPartition?.DiskNumber ?? -1;
+            var previousPart = _selectedTargetPartition?.PartitionNumber ?? 0;
+            TargetPartitionOptions.Clear();
 
-            var source = _sourceDiskNumber >= 0
-                ? _disks.FirstOrDefault(d => d.DiskNumber == _sourceDiskNumber)
-                : null;
-            // 自动项的说明里系统盘就是它自己，不再重复追加「系统盘」标签
-            TargetDiskOptions.Add(new TargetDiskOption(-1, source is null
-                ? T("Install.DiskAuto")
-                : T("Install.DiskAutoNamed", T("Install.DiskItem", source.DiskNumber, source.FriendlyName, source.SizeText))));
+            // 第一项：自动（当前 Windows 所在分区）
+            TargetPartitionOptions.Add(new TargetPartitionOption(-1, 0,
+                _sourcePartitionNumber > 0
+                    ? T("Install.PartitionAutoNamed", DescribeSystemPartition())
+                    : T("Install.PartitionAuto")));
 
             foreach (var disk in _disks.OrderBy(d => d.DiskNumber))
             {
-                TargetDiskOptions.Add(new TargetDiskOption(disk.DiskNumber, DescribeDisk(disk)));
+                foreach (var part in disk.Partitions.OrderBy(p => p.PartitionNumber))
+                {
+                    TargetPartitionOptions.Add(new TargetPartitionOption(
+                        disk.DiskNumber, part.PartitionNumber, DescribePartition(disk, part)));
+                }
             }
 
-            var selected = TargetDiskOptions.FirstOrDefault(o => o.DiskNumber == previous) ?? TargetDiskOptions[0];
-            if (previous >= 0 && selected.DiskNumber != previous)
+            var selected = TargetPartitionOptions.FirstOrDefault(o =>
+                               o.DiskNumber == previousDisk && o.PartitionNumber == previousPart)
+                           ?? TargetPartitionOptions[0];
+            if (previousPart > 0 && selected.PartitionNumber != previousPart)
             {
-                _log.Warn(T("Msg.DiskSelectionReset", previous));
+                _log.Warn(T("Msg.PartitionSelectionReset", previousPart));
             }
 
-            if (!ReferenceEquals(_selectedTargetDisk, selected))
+            if (!ReferenceEquals(_selectedTargetPartition, selected))
             {
-                _selectedTargetDisk = selected;
-                OnPropertyChanged(nameof(SelectedTargetDisk));
+                _selectedTargetPartition = selected;
+                OnPropertyChanged(nameof(SelectedTargetPartition));
             }
         }
         finally
         {
-            _rebuildingDiskOptions = false;
+            _rebuildingPartitionOptions = false;
         }
 
-        ApplyTargetDiskSelection();
+        ApplyTargetPartitionSelection();
     }
 
-    /// <summary>磁盘下拉框里的显示文本（按当前语言拼）。</summary>
-    private string DescribeDisk(DiskInfo disk)
+    /// <summary>当前 Windows 所在分区的描述文本（供「自动」项显示）。</summary>
+    private string DescribeSystemPartition()
     {
-        var text = T("Install.DiskItem", disk.DiskNumber, disk.FriendlyName, disk.SizeText);
-        return disk.IsSystem ? text + " · " + T("Install.DiskSystem") : text;
+        var disk = _disks.FirstOrDefault(d => d.DiskNumber == _sourceDiskNumber);
+        var part = disk?.Partitions.FirstOrDefault(p => p.PartitionNumber == _sourcePartitionNumber);
+        return part is null ? T("Install.PartitionAuto") : DescribePartition(disk!, part);
+    }
+
+    /// <summary>安装位置下拉框里某一项的显示文本（按当前语言拼）。</summary>
+    private string DescribePartition(DiskInfo disk, PartitionInfo part)
+    {
+        var letter = string.IsNullOrEmpty(part.DriveLetter)
+            ? T("Install.NoLetter")
+            : part.DriveLetter + ":";
+        var text = T("Install.PartitionItem", disk.DiskNumber, part.PartitionNumber, letter, part.SizeText);
+
+        // 引导分区与系统保留分区不能当安装目标，标出来免得选错
+        if (part.IsEsp)
+        {
+            return text + " · " + T("Install.PartitionEsp");
+        }
+
+        if (part.Type.Equals("Reserved", StringComparison.OrdinalIgnoreCase))
+        {
+            return text + " · " + T("Install.PartitionReserved");
+        }
+
+        if (disk.DiskNumber == _sourceDiskNumber && part.PartitionNumber == _sourcePartitionNumber)
+        {
+            return text + " · " + T("Install.PartitionCurrent");
+        }
+
+        return text;
     }
 
     /// <summary>
-    /// 选择非系统盘时的联动：强制整盘重建（该磁盘上没有任何值得保留的系统文件，
-    /// 「保留文件 / 保留分区」都不成立），并刷新相关提示；切回自动时恢复原选择。
+    /// 选择非系统盘上的分区时的联动：该磁盘上还没有可引导的 Windows 环境，
+    /// 必须整盘重建才能装出能启动的系统；切回自动时恢复原选择。
     /// </summary>
-    private void ApplyTargetDiskSelection()
+    private void ApplyTargetPartitionSelection()
     {
         if (IsCrossDiskTarget)
         {
@@ -890,11 +927,14 @@ public sealed class MainViewModel : ObservableObject
             var userName = NormalizeUserName(ExpertUserName);
             var computerName = NormalizeComputerName(ExpertComputerName);
 
-            // 目标磁盘：-1 = 自动（系统盘）；选非系统盘时 FillTargetAsync 会强制整盘重建
-            var targetDisk = SelectedTargetDisk?.DiskNumber ?? -1;
-            if (IsCrossDiskTarget && SelectedTargetDisk is not null)
+            // 安装位置：分区号 0 = 自动（当前系统分区）；
+            // 选了另一块磁盘上的分区时 FillTargetAsync 会要求整盘重建该磁盘。
+            var selectedPartition = SelectedTargetPartition;
+            var targetDisk = selectedPartition is { IsAuto: false } ? selectedPartition.DiskNumber : -1;
+            var targetPartition = selectedPartition is { IsAuto: false } ? selectedPartition.PartitionNumber : 0;
+            if (IsCrossDiskTarget && selectedPartition is not null)
             {
-                _log.Info(T("Msg.CrossDiskChosen", SelectedTargetDisk.Display));
+                _log.Info(T("Msg.CrossDiskChosen", selectedPartition.Display));
             }
 
             var options = new DeployOptions
@@ -908,7 +948,8 @@ public sealed class MainViewModel : ObservableObject
                 // 手填的本地路径同样算「用户自选」，不自动猜版本
                 UserSuppliedImage = IsLocalFile(imageUrl),
                 TargetDiskNumber = targetDisk,
-                TargetDiskLabel = IsCrossDiskTarget && SelectedTargetDisk is not null ? SelectedTargetDisk.Display : string.Empty,
+                TargetPartitionNumber = targetPartition,
+                TargetDiskLabel = IsCrossDiskTarget && selectedPartition is not null ? selectedPartition.Display : string.Empty,
                 InstallMode = ExpertCleanInstall ? InstallMode.Clean : InstallMode.KeepFiles,
                 PartitionScheme = ExpertWipeDisk
                     ? (_systemInfoService.GetFirmware() == FirmwareType.Uefi ? PartitionScheme.WipeDiskGpt : PartitionScheme.WipeDiskMbr)
@@ -1119,12 +1160,15 @@ public sealed class MainViewModel : ObservableObject
         var disks = await _storage.GetDisksAsync(ct).ConfigureAwait(true);
         var firmware = _systemInfoService.GetFirmware();
 
-        // 记住磁盘列表与系统盘位置：目标磁盘下拉框据此构建
+        // 记住磁盘列表与系统分区位置：安装位置下拉框据此构建
         _disks = disks;
         var systemDrive = _storage.GetSystemDriveLetter();
-        _sourceDiskNumber = disks.FirstOrDefault(d => d.Partitions.Any(p =>
-            p.DriveLetter.Equals(systemDrive, StringComparison.OrdinalIgnoreCase)))?.DiskNumber ?? -1;
-        RebuildTargetDiskOptions();
+        var sourceDisk = disks.FirstOrDefault(d => d.Partitions.Any(p =>
+            p.DriveLetter.Equals(systemDrive, StringComparison.OrdinalIgnoreCase)));
+        _sourceDiskNumber = sourceDisk?.DiskNumber ?? -1;
+        _sourcePartitionNumber = sourceDisk?.Partitions.FirstOrDefault(p =>
+            p.DriveLetter.Equals(systemDrive, StringComparison.OrdinalIgnoreCase))?.PartitionNumber ?? 0;
+        RebuildTargetPartitionOptions();
 
         var firmwareText = firmware == FirmwareType.Uefi
             ? T("Info.FirmwareUefi")

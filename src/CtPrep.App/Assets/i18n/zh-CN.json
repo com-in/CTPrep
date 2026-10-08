@@ -1,11 +1,8 @@
 {
   "Language.Name": "简体中文",
-
   "App.Title": "CTPrep · 系统重装工具",
-
   "Tab.Novice": "新手模式",
   "Tab.Advanced": "高级设置",
-
   "Novice.Title": "一键重装",
   "Novice.Warning": "重装会清空 C 盘。开始前请先把要保留的文件备份到 U 盘或其它磁盘。",
   "Novice.Start": "开始重装",
@@ -14,7 +11,6 @@
   "Novice.Clear": "清除",
   "Novice.HintAuto": "点「开始重装」后无需其它操作：自动识别本机版本、下载镜像与 PE、重启进入 PE 完成无人值守安装并装好驱动。\n全程需要联网，请接好电源。",
   "Novice.HintLocal": "已指定本地镜像，不再下载镜像；PE 仍需联网下载。",
-
   "Info.Title": "本机信息",
   "Info.Refresh": "重新检测",
   "Info.OpenDir": "打开目录",
@@ -34,7 +30,6 @@
   "Target.ModeKeepFiles": "保留文件",
   "Target.DryRun": "演练模式",
   "Target.Real": "正式模式",
-
   "Image.Title": "镜像来源",
   "Image.Url": "系统镜像地址",
   "Image.Local": "本地镜像文件",
@@ -42,15 +37,8 @@
   "Image.Browse": "浏览",
   "Image.Analyze": "分析镜像",
   "Image.Edition": "选择版本",
-
   "Install.Title": "安装方式",
-  "Install.Disk": "目标磁盘",
-  "Install.DiskTooltip": "选择把 Windows 安装到哪块磁盘。选择非系统盘时，该磁盘会被整盘清空并重建为系统盘。",
-  "Install.DiskAuto": "自动（当前系统盘）",
-  "Install.DiskAutoNamed": "自动（系统盘：{0}）",
-  "Install.DiskItem": "磁盘 {0} · {1} · {2}",
-  "Install.DiskSystem": "系统盘",
-  "Install.CrossDiskHint": "目标磁盘与当前系统盘不同：{0} 上的所有分区都会被删除并重建为系统盘；当前系统的数据不受影响，但部署完成后将从新磁盘启动。",
+  "Install.CrossDiskHint": "目标磁盘与当前系统盘不同：磁盘 {0} 上的所有分区都会被删除并重建，系统装在这块磁盘上；当前系统的数据不受影响，但部署完成后将从这块磁盘启动。",
   "Install.Clean": "全新安装（格式化目标分区，推荐）",
   "Install.Wipe": "整盘重建（删除目标磁盘所有分区并重新分区）",
   "Install.FormatBoot": "格式化引导分区（清除旧引导项）",
@@ -58,7 +46,6 @@
   "Install.Index": "映像索引",
   "Install.IndexTooltip": "0 = 自动：联网镜像匹配本机版本，匹配不到则用专业版；本地多版本镜像会弹窗选择。",
   "Install.StagingSize": "暂存分区(MB)",
-
   "Unattend.Title": "无人值守设置",
   "Unattend.Enable": "启用无人值守（跳过 OOBE，自动创建本地账户）",
   "Unattend.BypassNro": "跳过 Windows 11 联网要求（BypassNRO）",
@@ -70,21 +57,17 @@
   "Unattend.TimeZoneTooltip": "按 UTC 偏移排序，支持输入关键字快速定位。",
   "Unattend.DisableDefender": "禁用 Windows Defender",
   "Unattend.DisableDefenderTooltip": "首次进入系统前写入禁用策略并停用相关服务。较新版本的 Windows 可能因篡改防护自动恢复，必要时进入系统后再确认一次。",
-
   "Drivers.Title": "驱动包",
   "Drivers.Hint": "每行一个：本地目录 / .zip / .exe / 下载地址",
-
   "Behavior.Title": "执行行为",
   "Behavior.Reboot": "准备完成后自动重启进入 PE",
   "Behavior.Shutdown": "部署完成后自动关机（默认重启）",
   "Behavior.DryRun": "演练模式（只输出命令，不改动磁盘与引导）",
   "Behavior.Language": "界面语言",
-
   "Action.Cancel": "取消当前任务",
   "Action.CancelReboot": "取消重启",
   "Action.Deploy": "准备并执行",
   "Log.Title": "运行日志",
-
   "Status.Ready": "就绪",
   "Status.Detecting": "正在检测本机系统信息...",
   "Status.Detected": "检测完成。",
@@ -98,17 +81,14 @@
   "Status.RebootCountdown": "{0} 秒后重启进入 PE",
   "Status.RebootCancelled": "已取消自动重启。",
   "Status.RebootCancelFailed": "取消重启失败，请手动执行 shutdown /a。",
-
   "Dialog.PickImageTitle": "选择系统镜像文件",
   "Dialog.ErrorTitle": "错误",
   "Dialog.Cancel": "取消",
   "Dialog.ConfirmOk": "确定",
   "Dialog.ConfirmWait": "确定（{0}）",
-
   "Confirm1.Title": "确认已备份数据",
   "Confirm1.Line1": "重装会清空 C 盘上的所有内容（桌面、文档、下载等）。",
   "Confirm1.Line2": "请先把要保留的文件备份到 U 盘或其它磁盘。",
-
   "Confirm2.Title": "确认安装目标",
   "Confirm2.Target": "安装目标：{0}",
   "Confirm2.ModeClean": "安装方式：全新安装（格式化目标分区）",
@@ -120,18 +100,15 @@
   "Confirm2.ImageLocal": "系统镜像：本地文件 {0}",
   "Confirm2.ImageOnline": "系统镜像：联网下载 {0}",
   "Confirm2.Account": "用户账户：{0}",
-
   "Confirm3.Title": "确认开始执行",
   "Confirm3.Real": "磁盘与引导会被改写，且无法自动撤销。",
   "Confirm3.DryRun": "演练模式：不会改动磁盘。",
   "Confirm3.Reboot": "准备完成后 10 秒自动重启进入 PE，可在倒计时内取消。",
-
   "Edition.Title": "选择要安装的系统版本",
   "Edition.Header": "选择要安装的系统版本",
   "Edition.Hint": "镜像中包含多个版本，请选择安装目标。",
   "Edition.Cancel": "取消",
   "Edition.Confirm": "安装此版本",
-
   "Msg.NoviceCancelled": "用户已取消重装。",
   "Msg.NoPe": "config.ini 的 [PE] 段没有配置可用的 PE 下载地址。",
   "Msg.NoImage": "config.ini 的 [Image] 段没有匹配到 {0} 的镜像地址，也没有配置 Default 回退地址。\n可以点「选择本地镜像」直接指定一个 .iso / .wim / .esd 文件。",
@@ -164,9 +141,7 @@
   "Msg.StagingOnTargetDisk": "整盘重建要把磁盘 {0} 从 {1} 转成 {2}，但暂存分区也在这块磁盘上，转换会连同暂存的数据一起清掉。\n请先用其它工具把系统盘转成目标分区表，或在另一块磁盘上留一个足够大的 NTFS 分区。",
   "Msg.DiskTooLargeForMbr": "目标磁盘 {0}（约 {1} TB）超过 2TB，MBR 分区表放不下。请在高级设置里选择「抹掉整盘重新分区」改用 GPT。",
   "Msg.TargetDiskGone": "选择的目标磁盘（磁盘 {0}）已不存在，请点「重新检测」刷新磁盘列表后再试。",
-  "Msg.DiskSelectionReset": "先前选择的目标磁盘（磁盘 {0}）已不存在，已改回自动选择。",
   "Msg.CrossDiskChosen": "已选择非系统盘作为安装目标：{0}，该磁盘会被整盘重建。",
-
   "Msg.RunOnCDriveTitle": "请从 C 盘以外的分区运行 CTPrep",
   "Msg.RunOnCDriveBody": "CTPrep 正在 C 盘运行。\n\n重装会压缩和格式化系统分区，程序放在 C 盘会被占用，可能导致部署失败或留下异常分区。\n\n请把整个 CTPrep 文件夹复制到其它分区（例如 D:\\CTPrep）后再运行。\n\n当前目录：{0}",
   "Msg.StartupFailedTitle": "CTPrep 启动失败",
@@ -175,7 +150,6 @@
   "Msg.NoEditionSelected": "未选择要安装的版本，已取消本次部署。",
   "Msg.EditionIndexMissing": "选择的版本索引 {0} 不在镜像内。",
   "Msg.NoImageIndex": "镜像内没有可用的映像索引。",
-
   "Msg.ManifestFetching": "正在获取链接清单：{0}",
   "Msg.ManifestInvalid": "链接清单无效（{0}）：{1}",
   "Msg.ManifestNoImage": "链接清单里没有与本机版本（{0}）匹配的镜像，也没有 Default 回退。",
@@ -183,5 +157,18 @@
   "Msg.ManifestImageResolved": "链接清单已解析镜像地址：{0}",
   "Msg.ManifestPeResolved": "链接清单已解析 PE 地址：{0}",
   "Msg.ManifestNoSha": "链接清单条目没有 sha256，将跳过完整性校验。",
-  "Msg.FetchTextTooLarge": "远程文本文件过大（超过 {0} KB），已停止下载。"
+  "Msg.FetchTextTooLarge": "远程文本文件过大（超过 {0} KB），已停止下载。",
+  "Install.Partition": "安装位置",
+  "Install.PartitionAuto": "自动（当前系统分区）",
+  "Install.PartitionAutoNamed": "自动（当前系统分区：{0}）",
+  "Install.PartitionItem": "磁盘 {0} 分区 {1} · {2} · {3}",
+  "Install.PartitionEsp": "EFI 引导分区",
+  "Install.PartitionReserved": "系统保留分区",
+  "Install.PartitionCurrent": "当前系统",
+  "Install.NoLetter": "无盘符",
+  "Install.PartitionTooltip": "系统装到哪个分区。默认是当前 Windows 所在的分区；换到另一块磁盘上的分区时，那块磁盘会被整盘重建。",
+  "Msg.PartitionSelectionReset": "上次选择的分区 {0} 已不存在，已回到「自动」。",
+  "Msg.TargetPartitionGone": "磁盘 {0} 上找不到分区 {1}，请重新检测后选择。",
+  "Msg.TargetPartitionIsBoot": "磁盘 {0} 分区 {1} 是引导分区，不能作为安装目标。",
+  "Msg.NoEspOnTargetDisk": "磁盘 {0} 上没有 EFI 引导分区，无法写入启动项。请勾选「整盘重建」让程序新建引导分区。"
 }
