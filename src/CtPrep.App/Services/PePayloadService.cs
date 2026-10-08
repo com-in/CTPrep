@@ -429,6 +429,10 @@ public sealed class PePayloadService
         var devOpts = string.IsNullOrEmpty(o.PeDeviceOptionsGuid)
             ? "rem the ramdisk device options object is shared ({ramdiskoptions}) and is kept"
             : $"bcdedit /store \"%OLDBOOT_LETTER%:{bcdPath}\" /delete {o.PeDeviceOptionsGuid} /f >>\"%LOG%\" 2>&1";
+        // GUID 为空时不能渲染出半截 bcdedit 命令：那会污染日志并让人误判为清理失败
+        var delEntry = string.IsNullOrEmpty(o.PeBootEntryGuid)
+            ? "rem the PE boot entry identifier is unknown; nothing to delete"
+            : $"if exist \"%OLDBOOT_LETTER%:{bcdPath}\" bcdedit /store \"%OLDBOOT_LETTER%:{bcdPath}\" /delete {o.PeBootEntryGuid} /f >>\"%LOG%\" 2>&1";
 
         return string.Join(Environment.NewLine, new[]
         {
@@ -443,7 +447,7 @@ public sealed class PePayloadService
             ">>\"%WORK%\\diskpart-oldboot.txt\" echo assign letter=%OLDBOOT_LETTER%",
             ">>\"%WORK%\\diskpart-oldboot.txt\" echo exit",
             "diskpart /s \"%WORK%\\diskpart-oldboot.txt\" >>\"%LOG%\" 2>&1",
-            $"if exist \"%OLDBOOT_LETTER%:{bcdPath}\" bcdedit /store \"%OLDBOOT_LETTER%:{bcdPath}\" /delete {o.PeBootEntryGuid} /f >>\"%LOG%\" 2>&1",
+            delEntry,
             devOpts,
             ")",
         });

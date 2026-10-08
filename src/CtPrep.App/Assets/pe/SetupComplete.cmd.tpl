@@ -24,12 +24,23 @@ echo ===== CTPrep SetupComplete %DATE% %TIME% ===== >>"%LOG%"
 rem ---------- 1. Install .inf drivers ----------
 if exist "%PKG%" (
     echo [1/5] Installing the staged driver packages >>"%LOG%"
+    rem "/add-driver /subdirs /install" only exists from Windows 10 1607 onwards.
+    rem Windows 7 / 8.1 ship the legacy pnputil, which understands "-a <inf> -i"
+    rem and nothing else, so retry with it whenever the new syntax is rejected.
     for /d %%d in ("%PKG%\*") do (
         echo    -- folder %%~fd >>"%LOG%"
         pnputil /add-driver "%%~fd\*.inf" /subdirs /install >>"%LOG%" 2>&1
+        if errorlevel 1 (
+            echo    -- new syntax rejected, retrying with the legacy one >>"%LOG%"
+            pnputil -a "%%~fd\*.inf" -i >>"%LOG%" 2>&1
+        )
     )
     echo    -- package root >>"%LOG%"
     pnputil /add-driver "%PKG%\*.inf" /subdirs /install >>"%LOG%" 2>&1
+    if errorlevel 1 (
+        echo    -- new syntax rejected, retrying with the legacy one >>"%LOG%"
+        pnputil -a "%PKG%\*.inf" -i >>"%LOG%" 2>&1
+    )
 
     rem ---------- 2. Run .exe driver installers silently ----------
     echo [2/5] Running the silent driver installers >>"%LOG%"

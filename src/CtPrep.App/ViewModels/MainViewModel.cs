@@ -493,6 +493,7 @@ public sealed class MainViewModel : ObservableObject
     /// <summary>因选择非系统盘而强制勾选「整盘重建」时，记住用户原来的选择，切回自动时恢复。</summary>
     private bool _wipeForcedByCrossDisk;
     private bool _wipeRememberedByCrossDisk;
+    private bool _cleanRememberedByCrossDisk;
 
     /// <summary>重建下拉框期间抑制选中项的副作用处理。</summary>
     private bool _rebuildingDiskOptions;
@@ -611,6 +612,7 @@ public sealed class MainViewModel : ObservableObject
             {
                 _wipeForcedByCrossDisk = true;
                 _wipeRememberedByCrossDisk = _expertWipeDisk;
+                _cleanRememberedByCrossDisk = _expertCleanInstall;
                 ExpertWipeDisk = true;
             }
         }
@@ -618,6 +620,9 @@ public sealed class MainViewModel : ObservableObject
         {
             _wipeForcedByCrossDisk = false;
             ExpertWipeDisk = _wipeRememberedByCrossDisk;
+            // 「整盘重建」被强制打开时，它的 setter 也把「全新安装」一并打开了。
+            // 切回系统盘必须把两者一起还原，否则用户原本的「保留文件」选择会被静默吞掉。
+            ExpertCleanInstall = _cleanRememberedByCrossDisk;
         }
 
         OnPropertyChanged(nameof(IsCrossDiskTarget));
