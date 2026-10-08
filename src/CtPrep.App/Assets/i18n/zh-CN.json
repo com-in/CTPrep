@@ -170,5 +170,11 @@
   "Msg.PartitionSelectionReset": "上次选择的分区 {0} 已不存在，已回到「自动」。",
   "Msg.TargetPartitionGone": "磁盘 {0} 上找不到分区 {1}，请重新检测后选择。",
   "Msg.TargetPartitionIsBoot": "磁盘 {0} 分区 {1} 是引导分区，不能作为安装目标。",
-  "Msg.NoEspOnTargetDisk": "磁盘 {0} 上没有 EFI 引导分区，无法写入启动项。请勾选「整盘重建」让程序新建引导分区。"
+  "Msg.NoEspOnTargetDisk": "磁盘 {0} 上没有 EFI 引导分区，无法写入启动项。请勾选「整盘重建」让程序新建引导分区。",
+  "Progress.CopyPe": "开始复制 PE 环境...",
+  "Progress.CopyPeItem": "复制 PE：{0}",
+  "Progress.CopyImage": "开始复制系统镜像...",
+  "Progress.CopyImageItem": "复制镜像：{0}",
+  "Status.AnalyzingLocal": "正在解析本地镜像...",
+  "Status.CopyImage": "复制镜像：{0}"
 }

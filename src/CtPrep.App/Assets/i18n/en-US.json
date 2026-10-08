@@ -170,5 +170,11 @@
   "Msg.PartitionSelectionReset": "The previously selected partition {0} no longer exists; falling back to Automatic.",
   "Msg.TargetPartitionGone": "Partition {1} was not found on disk {0}. Re-detect and choose again.",
   "Msg.TargetPartitionIsBoot": "Partition {1} on disk {0} is a boot partition and cannot be the install target.",
-  "Msg.NoEspOnTargetDisk": "Disk {0} has no EFI system partition, so the boot files cannot be written. Enable the whole-disk rebuild to create one."
+  "Msg.NoEspOnTargetDisk": "Disk {0} has no EFI system partition, so the boot files cannot be written. Enable the whole-disk rebuild to create one.",
+  "Progress.CopyPe": "Copying the WinPE environment...",
+  "Progress.CopyPeItem": "Copying WinPE: {0}",
+  "Progress.CopyImage": "Copying the Windows image...",
+  "Progress.CopyImageItem": "Copying image: {0}",
+  "Status.AnalyzingLocal": "Reading the local image...",
+  "Status.CopyImage": "Copying image: {0}"
 }

@@ -69,6 +69,21 @@ public sealed class DownloadService
     }
 
     /// <summary>
+    /// 该来源是不是本机上已存在的文件。true 时 <see cref="AcquireAsync"/> 走复制而不是联网下载，
+    /// 调用方据此把「下载」文案换成「复制」，免得对着一个本地文件说成在下载。
+    /// </summary>
+    public static bool IsLocalSource(string source)
+    {
+        if (string.IsNullOrWhiteSpace(source) ||
+            source.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        return File.Exists(ConfigService.ResolvePath(source));
+    }
+
+    /// <summary>
     /// 把 <paramref name="source"/>（URL 或本地路径）落到 <paramref name="targetDirectory"/>，
     /// 返回最终文件路径。已存在且大小一致时直接复用。
     /// </summary>
@@ -88,7 +103,7 @@ public sealed class DownloadService
 
         // 本地文件 / UNC 路径：直接复制
         var localCandidate = ConfigService.ResolvePath(source);
-        if (!source.StartsWith("http", StringComparison.OrdinalIgnoreCase) && File.Exists(localCandidate))
+        if (IsLocalSource(source))
         {
             var destLocal = Path.Combine(targetDirectory, Path.GetFileName(localCandidate));
             if (!string.Equals(Path.GetFullPath(localCandidate), Path.GetFullPath(destLocal), StringComparison.OrdinalIgnoreCase))

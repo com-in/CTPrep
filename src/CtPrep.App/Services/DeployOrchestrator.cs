@@ -72,18 +72,25 @@ public sealed class DeployOrchestrator
             throw new InvalidOperationException(T("Msg.NoEsp"));
         }
 
-        // ---------- 1. 下载 ----------
-        Report(progress, DeployStage.Download, 0, T("Progress.DownloadPe"));
+        // ---------- 1. 下载 / 复制 ----------
+        // 来源是本机文件时 AcquireAsync 走的是复制，文案要说「复制」而不是「下载」
+        var peIsLocal = DownloadService.IsLocalSource(options.PeSource);
+        Report(progress, DeployStage.Download, 0,
+            T(peIsLocal ? "Progress.CopyPe" : "Progress.DownloadPe"));
         var downloadProgress = new Progress<DownloadProgress>(p =>
-            Report(progress, DeployStage.Download, (int)((p.Percent ?? 0) * 50), T("Progress.DownloadPeItem", p.Display)));
+            Report(progress, DeployStage.Download, (int)((p.Percent ?? 0) * 50),
+                T(peIsLocal ? "Progress.CopyPeItem" : "Progress.DownloadPeItem", p.Display)));
 
         var peFile = await _download
             .AcquireAsync(options.PeSource, Path.Combine(downloadRoot, "pe"), options.PeSha256, downloadProgress, ct)
             .ConfigureAwait(false);
 
-        Report(progress, DeployStage.Download, 50, T("Progress.DownloadImage"));
+        var imageIsLocal = DownloadService.IsLocalSource(options.ImageSource);
+        Report(progress, DeployStage.Download, 50,
+            T(imageIsLocal ? "Progress.CopyImage" : "Progress.DownloadImage"));
         var imageDownloadProgress = new Progress<DownloadProgress>(p =>
-            Report(progress, DeployStage.Download, 50 + (int)((p.Percent ?? 0) * 50), T("Progress.DownloadImageItem", p.Display)));
+            Report(progress, DeployStage.Download, 50 + (int)((p.Percent ?? 0) * 50),
+                T(imageIsLocal ? "Progress.CopyImageItem" : "Progress.DownloadImageItem", p.Display)));
 
         var imageFile = await _download
             .AcquireAsync(options.ImageSource, Path.Combine(downloadRoot, "image"), options.ImageSha256, imageDownloadProgress, ct)

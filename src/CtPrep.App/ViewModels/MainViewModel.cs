@@ -867,10 +867,13 @@ public sealed class MainViewModel : ObservableObject
                 expectedSha256 = resolved.Sha256;
             }
 
-            StatusText = T("Status.Analyzing");
+            // 本地文件是复制进来的，文案要说「复制」，别把读本地盘说成下载
+            var copyLocal = DownloadService.IsLocalSource(source);
+            StatusText = T(copyLocal ? "Status.AnalyzingLocal" : "Status.Analyzing");
             var file = await _download
                 .AcquireAsync(source, Path.Combine(_config.RuntimeDir, "downloads", "image"), expectedSha256,
-                    new Progress<DownloadProgress>(p => StatusText = T("Status.DownloadImage", p.Display)), ct)
+                    new Progress<DownloadProgress>(p =>
+                        StatusText = T(copyLocal ? "Status.CopyImage" : "Status.DownloadImage", p.Display)), ct)
                 .ConfigureAwait(true);
 
             var work = Path.Combine(_config.RuntimeDir, "work", "image");
