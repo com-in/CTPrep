@@ -69,5 +69,15 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add docs/images.json
           git commit -m "Sync Microsoft download links"
-          # push an explicit ref: a tag-triggered checkout has a detached HEAD
-          git push origin HEAD:refs/heads/main
+          # Someone may have pushed while the sync was running: rebase onto their
+          # work and retry. Do NOT use --force here: it would overwrite the
+          # remote branch and silently drop their commits.
+          for attempt in 1 2 3; do
+            if git pull --rebase --autostash origin main && \
+               git push origin HEAD:refs/heads/main; then
+              echo "sync commit pushed"
+              break
+            fi
+            echo "push attempt ${attempt} failed, retrying"
+            sleep 5
+          done
