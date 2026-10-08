@@ -77,9 +77,16 @@ public sealed class DeployOptions
 
     /// <summary>
     /// 目标映像的 Windows 主版本（7 / 8 / 10 / 11；未知为 0）。
-    /// 由编排层从所选映像名解析后填入，用于裁剪版本专属的应答文件节点。
+    /// 编排层优先从 dism 读取的真实版本号解析，失败时回退到映像名推断；
+    /// 应答文件据此裁剪版本专属节点（写错会让安装程序拒绝整份文件）。
     /// </summary>
     public int WindowsMajorVersion { get; set; }
+
+    /// <summary>
+    /// 目标映像的处理器架构（dism 报告的 "x64" / "x86" / "arm64"；空 = 未识别，按 amd64 处理）。
+    /// 应答文件的 processorArchitecture 必须与映像一致：x86 映像配 amd64 组件会让安装失败。
+    /// </summary>
+    public string ImageArchitecture { get; set; } = string.Empty;
 
     // ---------- 无人值守 ----------
     public bool Unattended { get; set; } = true;

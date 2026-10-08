@@ -111,8 +111,18 @@ public sealed class DeployOrchestrator
         options.ImageIndex = ResolveImageIndex(options, imageInfos, system);
 
         var selected = imageInfos.FirstOrDefault(i => i.Index == options.ImageIndex);
-        options.WindowsMajorVersion = selected?.MajorVersion ?? 0;
-        _log.Info($"将安装：{selected?.Name ?? $"索引 {options.ImageIndex}"}（Windows 主版本 {(options.WindowsMajorVersion == 0 ? "未知" : options.WindowsMajorVersion.ToString())}）");
+
+        // 应答文件必须按目标映像的「真实」版本与架构渲染：
+        //  - 版本决定 OOBE 里哪些节点能写（写进目标系统不认识的节点会让安装程序拒绝整份文件）；
+        //  - processorArchitecture 必须与映像一致（x86 映像配 amd64 组件同样会让安装失败）。
+        // 版本号优先读 dism 详情（对改版/精简映像也可靠），失败时回退到映像名推断。
+        var imageDetail = await _dism.GetWimInfoDetailAsync(installImage, options.ImageIndex, ct).ConfigureAwait(false);
+        options.WindowsMajorVersion = imageDetail.MajorVersion != 0
+            ? imageDetail.MajorVersion
+            : selected?.MajorVersion ?? 0;
+        options.ImageArchitecture = imageDetail.Architecture;
+
+        _log.Info($"将安装：{selected?.Name ?? $"索引 {options.ImageIndex}"}（Windows 主版本 {(options.WindowsMajorVersion == 0 ? "未知" : options.WindowsMajorVersion.ToString())}，架构 {(string.IsNullOrEmpty(options.ImageArchitecture) ? "未知，按 amd64 处理" : options.ImageArchitecture)}）");
 
         // ---------- 4. 准备驱动包 ----------
         var driverDirs = new List<string>();

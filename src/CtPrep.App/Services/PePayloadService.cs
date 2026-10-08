@@ -618,6 +618,10 @@ public sealed class PePayloadService
             ? $"CT-{Random.Shared.Next(100000, 999999)}"
             : o.ComputerName;
 
+        // 架构必须与目标映像一致：x86 映像配 amd64 组件会让安装程序拒绝整份文件
+        var arch = NormalizeArchitecture(o.ImageArchitecture);
+        var majorText = o.WindowsMajorVersion == 0 ? "unknown" : o.WindowsMajorVersion.ToString();
+
         var userName = string.IsNullOrWhiteSpace(o.UserName) ? "CTUser" : o.UserName;
 
         var template = ReadEmbeddedText("Assets/pe/unattend.xml.tpl");
@@ -652,7 +656,9 @@ public sealed class PePayloadService
             .Replace("{{AUTOLOGON_BLOCK}}", autoLogonBlock)
             .Replace("{{OOBE_BLOCK}}", RenderOobeBlock(o.WindowsMajorVersion))
             .Replace("{{TIME_ZONE}}", Escape(o.TimeZone))
-            .Replace("{{BYPASS_NRO}}", o.BypassNetworkRequirement ? "1" : "0");
+            .Replace("{{BYPASS_NRO}}", o.BypassNetworkRequirement ? "1" : "0")
+            .Replace("{{MAJOR}}", majorText)
+            .Replace("{{ARCH}}", arch);
     }
 
     /// <summary>
@@ -670,15 +676,16 @@ public sealed class PePayloadService
         sb.AppendLine("        <NetworkLocation>Work</NetworkLocation>");
         sb.AppendLine("        <ProtectYourPC>3</ProtectYourPC>");
 
-        // 微软文档：HideOnlineAccountScreens 仅适用于 Windows 10 及以上
-        if (majorVersion == 0 || majorVersion >= 10)
+        // 版本专属节点只在「确认」目标版本时才写：写进目标系统不认识的节点会让安装程序
+        // 拒绝整份文件，而漏写只是少隐藏一个页面。所以版本未知（0）时一律不写。
+        // HideOnlineAccountScreens 是 Win10 起才有的设置。
+        if (majorVersion >= 10)
         {
             sb.AppendLine("        <HideOnlineAccountScreens>true</HideOnlineAccountScreens>");
         }
 
-        // 微软文档：SkipMachineOOBE / SkipUserOOBE 只在 Windows 7（及更早）上有效，
-        // 作用是把 Windows Welcome 整个跳过；从 Windows 8 起这两个设置已不可用，
-        // 出现即会让安装程序拒绝整份应答文件。所以只给 Win7 目标追加 ——
+        // SkipMachineOOBE / SkipUserOOBE 用于跳过 Windows Welcome，只在 Windows 7（及更早）
+        // 上有效；从 Windows 8 起这两个设置已从系统移除，写进去同样会让安装失败。
         // 缺了它们，Win7 首次开机会真实进入 Windows Welcome 流程。
         if (majorVersion == 7)
         {
@@ -687,6 +694,22 @@ public sealed class PePayloadService
         }
 
         return sb.ToString().TrimEnd('\r', '\n');
+    }
+
+    /// <summary>把 dism 报告的架构名规整成应答文件里的 processorArchitecture 取值；未知按 amd64。</summary>
+    private static string NormalizeArchitecture(string? architecture)
+    {
+        if (string.IsNullOrWhiteSpace(architecture))
+        {
+            return "amd64";
+        }
+
+        return architecture.Trim().ToLowerInvariant() switch
+        {
+            "x86" or "i386" or "i686" => "x86",
+            "arm64" or "aarch64" => "arm64",
+            _ => "amd64", // x64 / amd64（以及任何未知写法）都按 64 位处理
+        };
     }
 
     private static string RenderSetupComplete(DeployOptions o) =>

@@ -1,17 +1,26 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- CTPrep unattend answer file (generated automatically - do not edit) -->
 <!--
-  Compatible with Windows 7 / 8 / 10 / 11. Version-specific OOBE nodes are
-  added or removed by the generator according to the detected image version:
-  newer-only nodes (HideOnlineAccountScreens) are omitted for older builds,
-  and the Windows 7-only SkipMachineOOBE / SkipUserOOBE pair is added for
-  Windows 7 only. An unknown node makes Windows Setup reject the whole file.
+  CTPrep answer file; the generator tailors it to the selected image:
+
+    - processorArchitecture follows the image architecture: amd64 for x64,
+      x86 for 32-bit images. A component whose architecture does not exist
+      in the image makes Windows Setup reject the whole file.
+
+    - Version-specific OOBE nodes are written only when the target version
+      is known: SkipMachineOOBE / SkipUserOOBE for Windows 7 (they skip the
+      Windows Welcome flow and were removed in Windows 8), and
+      HideOnlineAccountScreens for Windows 10 and later. For an unknown
+      version only the generic nodes are used: a missing node merely leaves
+      an extra OOBE page, an unknown node is fatal.
 -->
 <unattend xmlns="urn:schemas-microsoft-com:unattend">
 
+  <!-- Target: Windows major version {{MAJOR}}, architecture {{ARCH}} -->
+
   <settings pass="specialize">
     <component name="Microsoft-Windows-Shell-Setup"
-               processorArchitecture="amd64"
+               processorArchitecture="{{ARCH}}"
                publicKeyToken="31bf3856ad364e35"
                language="neutral"
                versionScope="nonSxS"
@@ -22,7 +31,7 @@
     </component>
 
     <component name="Microsoft-Windows-Deployment"
-               processorArchitecture="amd64"
+               processorArchitecture="{{ARCH}}"
                publicKeyToken="31bf3856ad364e35"
                language="neutral"
                versionScope="nonSxS"
@@ -40,7 +49,7 @@
 
   <settings pass="oobeSystem">
     <component name="Microsoft-Windows-International-Core"
-               processorArchitecture="amd64"
+               processorArchitecture="{{ARCH}}"
                publicKeyToken="31bf3856ad364e35"
                language="neutral"
                versionScope="nonSxS"
@@ -53,7 +62,7 @@
     </component>
 
     <component name="Microsoft-Windows-Shell-Setup"
-               processorArchitecture="amd64"
+               processorArchitecture="{{ARCH}}"
                publicKeyToken="31bf3856ad364e35"
                language="neutral"
                versionScope="nonSxS"
