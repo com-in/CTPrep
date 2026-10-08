@@ -87,32 +87,6 @@ LightningPE=https://<你的域名>/images.json
 - `链接清单条目没有 sha256，将跳过完整性校验。`（警告）
 - 失败时：`链接清单无效（…）` / `链接清单里没有与本机版本（…）匹配的镜像…`
 
-## 自动同步微软官方链接（可选）
-
-微软官方直链约 24 小时后失效，所以指向微软的清单条目需要每天刷新。`tools/sync-microsoft-links.py` 负责这件事（Python 3.8+，仅标准库）：
-
-- 从微软官方接口取 **Windows 11 / Windows 10** 最新正式版 ISO 直链（默认中文）；
-- 只更新它负责的两个家族键（`Windows 11`、`Windows 10`），且放在 `images` 最前，保证家族匹配优先命中最新版；
-- 自建分发的条目（Win8.1 / Win7、PE 等）原样保留；
-- 全部成功才写文件，任何一步失败都不动旧清单——旧清单继续可用。
-
-```bash
-python3 tools/sync-microsoft-links.py --print                  # 预演：只打印，不改文件
-python3 tools/sync-microsoft-links.py --out docs/images.json   # 正式更新
-```
-
-定时方式任选：
-
-- **服务器（推荐）**——crontab 加一行，每天跑一次：
-  `30 20 * * * cd /srv/ctprep && python3 tools/sync-microsoft-links.py --out /srv/www/images.json`
-- **Windows 任务计划**——每天执行一次 `python tools\sync-microsoft-links.py --out docs\images.json`
-- **GitHub Actions**——加一个 schedule 工作流，跑完把清单提交回仓库。
-
-两个注意点：
-
-- 微软每次发大版本会**更换产品编号**；脚本顶部 `PRODUCTS` 里是当前编号，换号时改一行即可（最新编号可从 [pbatard/Fido](https://github.com/pbatard/Fido) 源码的 `$WindowsVersions` 表查到）。
-- 风控（SentinelReject）按 IP 累积计分：每天一次的频率没有压力，脚本还会自动换会话重试；短时间反复跑被临时拒绝时，过一阵再试即可。
-
 ## 部署
 
 ### 方式 A：GitHub Pages（推荐，零配置）
