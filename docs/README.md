@@ -134,10 +134,10 @@ python tools/sync-microsoft-links.py                          # 正式更新 doc
 
 定时方式任选（Windows 上需要 Git for Windows 提供 bash）：
 
-- **服务器（推荐）**——crontab 加一行，每天跑一次：
+- **GitHub Actions（仓库已内置，推荐）**——`.github/workflows/sync-links.yml` 每小时自动检查一次，清单超过 22 小时未更新就重新同步并提交，失败下个小时自动重试；也可在 Actions 页手动触发；
+- **服务器**——不想依赖 Actions 时用 crontab，每天跑一次：
   `30 20 * * * cd /srv/ctprep && python3 tools/sync-microsoft-links.py`
-- **Windows 任务计划**——每天执行一次 `python tools\sync-microsoft-links.py`；
-- **GitHub Actions**——加一个 schedule 工作流，跑完把清单提交回仓库。
+- **Windows 任务计划**——每天执行一次 `python tools\sync-microsoft-links.py`。
 
 两个注意点：
 

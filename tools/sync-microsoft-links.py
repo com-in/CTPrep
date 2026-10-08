@@ -120,13 +120,33 @@ def load_manifest(path):
         raise SystemExit("清单不是合法 JSON（%s）：%s" % (path, exc))
 
 
+def manifest_age_hours(path):
+    """清单 updated 字段距今的小时数；缺失或无法解析时返回 None。"""
+    stamp = str(load_manifest(path).get("updated") or "").strip()
+    if not stamp:
+        return None
+    try:
+        moment = datetime.strptime(stamp, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+    except ValueError:
+        return None
+    return (datetime.now(timezone.utc) - moment).total_seconds() / 3600.0
+
+
 def main():
     parser = argparse.ArgumentParser(description="抓取微软官方直链并合并进 CTPrep 链接清单")
     parser.add_argument("--out", default="docs/images.json", help="要更新的清单文件（默认 docs/images.json）")
     parser.add_argument("--lang", default="zh-cn", help="语言（模糊匹配，如 zh-cn / 简体 / en-us，默认 zh-cn）")
     parser.add_argument("--print", dest="print_only", action="store_true", help="只打印抓到的链接，不改文件")
     parser.add_argument("--only", default=None, help='只处理指定键（调试用，如 "Windows 10"）')
+    parser.add_argument("--min-age-hours", type=float, default=None,
+                        help="清单比这个小时数新时直接跳过（定时任务节流用；默认不跳过）")
     args = parser.parse_args()
+
+    if args.min_age_hours is not None:
+        age = manifest_age_hours(args.out)
+        if age is not None and age < args.min_age_hours:
+            print("上次同步于 %.1f 小时前（阈值 %.0f 小时），本次跳过。" % (age, args.min_age_hours))
+            return 0
 
     if not os.path.isfile(VENDORED):
         print("ERROR: 未找到内置工具：%s" % VENDORED)

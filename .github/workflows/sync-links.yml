@@ -1,0 +1,61 @@
+# Sync Microsoft download links into the link manifest (docs/images.json).
+#
+# The official links expire after ~24 hours, so the manifest must be refreshed
+# before that. GitHub cron cannot express "every 23 hours", so this workflow
+# wakes up hourly and syncs only when the manifest is older than 22 hours.
+# With hourly wake-ups that yields a refresh cycle of ~22-23 hours while
+# always keeping at least one hour of margin before the links expire. A failed
+# run is simply retried at the next hourly wake-up.
+#
+# The commit uses [skip ci] on purpose: manifest-only changes must not trigger
+# the build workflow (each build run pulls the 336 MB LFS object).
+#
+# Triggers:
+#   - schedule          : hourly wake-up; syncs only when the manifest is stale
+#   - workflow_dispatch : manual run; always syncs
+#   - push (this file)  : self-test whenever the workflow itself is edited
+name: sync-links
+
+on:
+  schedule:
+    - cron: '0 * * * *'
+  workflow_dispatch:
+  push:
+    paths:
+      - .github/workflows/sync-links.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-links
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Sync Microsoft links
+        run: |
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            python3 tools/sync-microsoft-links.py --min-age-hours 22
+          else
+            python3 tools/sync-microsoft-links.py
+          fi
+
+      - name: Commit and push when changed
+        run: |
+          if git diff --quiet -- docs/images.json; then
+            echo "manifest unchanged, nothing to commit"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/images.json
+          git commit -m "Sync Microsoft download links [skip ci]"
+          git push

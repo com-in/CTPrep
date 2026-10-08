@@ -193,7 +193,7 @@
       <h1>重装 Windows，点一次就够</h1>
       <p class="sub">
         自动识别本机系统版本，联网下载镜像与 WinPE，重启后无人值守地完成分区、安装与初始设置。
-        不需要 U 盘，不需要手写分区命令，界面中英双语、全程日志可见。
+        不用 U 盘，不用敲命令；双语界面，全程日志可见。
       </p>
       <div class="actions">
         <a class="btn" href="https://github.com/com-in/CTPrep/releases">下载绿色版</a>
@@ -219,7 +219,7 @@
   <!-- ================= Features ================= -->
   <section id="features">
     <h2>功能</h2>
-    <p class="lead">按「装一台普通电脑」的真实流程设计，每个环节都尽量少让人做决定，但该给的选项都给。</p>
+    <p class="lead">常规步骤有默认值，需要时再进高级设置。</p>
     <div class="grid">
       <div class="card">
         <svg class="ico" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h16v12H4z"/><path d="M8 20h8"/><path d="M12 16v4"/></svg>
@@ -229,7 +229,7 @@
       <div class="card">
         <svg class="ico" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
         <h3>版本自动匹配</h3>
-        <p>探测本机系统版本并从镜像中挑选对应版本安装；本地多版本镜像会弹窗让你选，不做猜测。</p>
+        <p>探测本机系统版本并挑出对应版本安装；本地镜像含多个版本时，弹窗让你选。</p>
       </div>
       <div class="card">
         <svg class="ico" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 13l4 4L19 7"/></svg>
@@ -257,7 +257,7 @@
   <!-- ================= How it works ================= -->
   <section id="how">
     <h2>流程</h2>
-    <p class="lead">准备阶段在主程序里完成，之后全部自动，中途只需要等。</p>
+    <p class="lead">准备阶段在主程序完成，重启后全部自动。</p>
     <div class="steps">
       <div class="step">
         <h3>准备</h3>
@@ -265,15 +265,15 @@
       </div>
       <div class="step">
         <h3>进入 WinPE</h3>
-        <p>重启直接进入部署环境，不需要插盘、不需要按键；旧系统盘之外的磁盘不受影响。</p>
+        <p>重启自动进入部署环境；未选中的磁盘不受影响。</p>
       </div>
       <div class="step">
         <h3>自动部署</h3>
-        <p>按所选方案分区并格式化、应用系统映像、写入应答文件、重建引导，界面实时显示进度。</p>
+        <p>按所选方案分区并格式化、应用系统映像、重建引导，界面实时显示进度。</p>
       </div>
       <div class="step">
         <h3>首次启动</h3>
-        <p>自动完成初始设置与账户创建、安装驱动包，进入桌面。暂存分区被回收，空间自动合并回去。</p>
+        <p>自动完成初始设置与账户创建、安装驱动包，进入桌面；暂存分区自动回收，空间合并回去。</p>
       </div>
     </div>
   </section>
@@ -281,7 +281,7 @@
   <!-- ================= Mirrors ================= -->
   <section id="mirrors">
     <h2>获取 Windows 镜像</h2>
-    <p class="lead">CTPrep 不附带系统镜像，请从可信渠道获取原版并校验哈希。程序在「选择本地镜像」里直接支持 .iso / .wim / .esd。</p>
+    <p class="lead">CTPrep 不附带系统镜像，请从可信渠道获取原版并校验哈希；本地镜像支持 .iso / .wim / .esd。</p>
     <div class="cols">
       <div class="card">
         <h3>官方与公共来源</h3>
@@ -296,8 +296,8 @@
       <div class="card">
         <h3>用「链接清单」管理下载源</h3>
         <p style="margin-bottom:6px">
-          把镜像与 WinPE 的下载地址维护在一个 JSON 清单里（放在 Cloudflare Pages 或任意静态托管上），
-          程序在下载前自动请求清单并挑选对应版本——换链接、换托管都不用更新程序。
+          把镜像与 WinPE 的下载地址集中在一个 JSON 清单里（任意静态托管即可）。
+          换链接、换托管，都只改这个文件。
         </p>
         <pre>{
   "images": {
@@ -317,7 +317,7 @@
   <!-- ================= Download ================= -->
   <section id="download" style="border-top:1px solid var(--divider)">
     <h2>下载</h2>
-    <p class="lead">绿色版自带 .NET 8 运行时，解压即用，不需要安装。</p>
+    <p class="lead">绿色版自带 .NET 8 运行时，解压即用。</p>
     <div class="dl">
       <div class="card">
         <h3 style="font-size:17px;margin-bottom:10px">CTPrep 绿色版</h3>
@@ -331,7 +331,7 @@
       <div class="card">
         <h3 style="font-size:17px;margin-bottom:10px">使用建议</h3>
         <ul>
-          <li>新手模式：一路默认即可完成一次干净的无人值守重装</li>
+          <li>新手模式：一路默认即可完成重装</li>
           <li>高级设置：可选镜像版本、目标磁盘、是否格式化引导分区、驱动包等</li>
           <li>第一次使用建议先在虚拟机里跑一遍完整流程</li>
         </ul>
