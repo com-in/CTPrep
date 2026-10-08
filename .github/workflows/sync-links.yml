@@ -36,6 +36,12 @@ concurrency:
   group: sync-links
   cancel-in-progress: false
 
+env:
+  # Run the JavaScript actions on Node 24. GitHub is retiring the Node 20
+  # action runtime during 2026, so pin it here instead of inheriting
+  # whatever the runner image happens to default to.
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 jobs:
   sync:
     runs-on: ubuntu-latest
