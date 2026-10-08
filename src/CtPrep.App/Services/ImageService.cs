@@ -1,4 +1,5 @@
 using System.IO.Compression;
+using CtPrep.App.Models;
 
 namespace CtPrep.App.Services;
 
@@ -7,11 +8,13 @@ public sealed class ImageService
 {
     private readonly ProcessRunner _runner;
     private readonly ILogSink _log;
+    private readonly DismService _dism;
 
-    public ImageService(ProcessRunner runner, ILogSink log)
+    public ImageService(ProcessRunner runner, ILogSink log, DismService dism)
     {
         _runner = runner;
         _log = log;
+        _dism = dism;
     }
 
     /// <summary>从 ISO / WIM / ESD 中取出可部署的系统映像（install.wim 或 install.esd），返回其路径。</summary>
@@ -47,11 +50,78 @@ public sealed class ImageService
             var dest = Path.Combine(workDir, Path.GetFileName(src));
             _log.Info($"提取系统映像：{src} -> {dest}（约 {DownloadProgress.FormatSize(new FileInfo(src).Length)}）");
             await CopyFileAsync(src, dest, ct).ConfigureAwait(false);
+
+            // 先确认这份映像真的能读，再让调用方去删原 ISO。
+            // 顺序反过来的话，ISO 删了才发现 WIM 是坏的，就两头都没了。
+            await VerifyImageAsync(dest, ct).ConfigureAwait(false);
+
+            // 校验通过，上一轮留下的另一种格式（install.wim / install.esd）就没用了。
+            // 一次部署只会用其中一个，留着就是几个 GB 白占地方。
+            TryDeleteSiblings(workDir, dest);
             return dest;
         }
         finally
         {
             await DismountIsoAsync(sourcePath, ct).ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>
+    /// 校验提取出来的 install.wim / install.esd 是否可用：dism 能读出映像列表才算数。
+    /// 读不出来就把这份半成品删掉，免得它和原 ISO 一起占着几个 GB。
+    /// </summary>
+    private async Task VerifyImageAsync(string imagePath, CancellationToken ct)
+    {
+        IReadOnlyList<ImageInfo> infos;
+        try
+        {
+            infos = await _dism.GetWimInfoAsync(imagePath, ct).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            TryDelete(imagePath);
+            throw new InvalidOperationException(
+                $"提取出的映像无法读取，已删除该文件：{imagePath}（{ex.Message}）", ex);
+        }
+
+        if (infos.Count == 0)
+        {
+            TryDelete(imagePath);
+            throw new InvalidOperationException($"提取出的映像里没有任何可用版本：{imagePath}");
+        }
+
+        _log.Info($"映像校验通过：{infos.Count} 个版本 —— {string.Join(" / ", infos.Select(i => i.Name))}");
+    }
+
+    /// <summary>
+    /// 清掉工作目录里上一轮留下的另一种格式的映像（install.wim / install.esd）。
+    /// 只认这两个文件名，目录里的其它东西一概不碰。
+    /// </summary>
+    private void TryDeleteSiblings(string workDir, string keepPath)
+    {
+        foreach (var name in new[] { "install.wim", "install.esd" })
+        {
+            var path = Path.Combine(workDir, name);
+            if (!path.Equals(keepPath, StringComparison.OrdinalIgnoreCase))
+            {
+                TryDelete(path);
+            }
+        }
+    }
+
+    private void TryDelete(string path)
+    {
+        try
+        {
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+                _log.Info($"已删除：{path}");
+            }
+        }
+        catch (Exception ex)
+        {
+            _log.Warn($"删除失败（不影响继续）：{path} -> {ex.Message}");
         }
     }
 

@@ -40,7 +40,7 @@ public sealed class MainViewModel : ObservableObject
         _download = new DownloadService(log);
         _manifests = new LinkManifestService(_download, log);
         _dism = new DismService(_runner, log);
-        _images = new ImageService(_runner, log);
+        _images = new ImageService(_runner, log, _dism);
         var boot = new BootService(_runner, log);
         var payload = new PePayloadService(_runner, _dism, log);
 
