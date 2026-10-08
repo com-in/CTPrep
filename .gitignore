@@ -43,3 +43,8 @@ desktop.ini
 # ---------- Python ----------
 __pycache__/
 *.pyc
+
+# ---------- Local download server (kept out of the repo) ----------
+# server/ is a local helper for LAN distribution and tunnel speed tests;
+# it holds large image files. Delete these lines to track it again.
+/server/
