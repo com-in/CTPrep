@@ -367,6 +367,7 @@ public sealed class PePayloadService
             .Replace("{{BOOT_LETTER}}", bootLetter.ToString())
             .Replace("{{INSTALL_MODE}}", mode)
             .Replace("{{KEEP_FILES_BLOCK}}", keepFilesBlock)
+            .Replace("{{DEFENDER_REMOVE}}", RenderDefenderRemoval(o))
             .Replace("{{BOOT_CLEANUP_BLOCK}}", RenderBootCleanupBlock(o))
             .Replace("{{BCDBOOT}}", bcdboot)
             .Replace("{{BCD_CLEANUP}}", bcdCleanup)
@@ -374,6 +375,28 @@ public sealed class PePayloadService
             .Replace("{{CLEANUP_STAGING_CALL}}", cleanupCall)
             .Replace("{{CLEANUP_EXTEND_LINES}}", RenderCleanupExtendLines(o))
             .Replace("{{SHUTDOWN_OR_REBOOT}}", o.ShutdownAfterDeploy ? "\"%SystemRoot%\\System32\\wpeutil.exe\" shutdown" : "\"%SystemRoot%\\System32\\wpeutil.exe\" reboot");
+    }
+
+    /// <summary>
+    /// 从刚铺好、还没启动过的映像里离线卸载 Windows Defender 功能。
+    /// 只有在这个时机做才可靠：系统启动后篡改防护（tamper protection）会把
+    /// 「仅靠策略禁用」的 Defender 自动改回来，而功能被卸载后它根本不存在。
+    /// 卸载失败不阻断部署——SetupComplete 里的策略禁用仍然生效，只是可能被系统改回去。
+    /// </summary>
+    private static string RenderDefenderRemoval(DeployOptions o)
+    {
+        if (!o.DisableDefender)
+        {
+            return string.Empty;
+        }
+
+        return "rem ---- Remove the Windows Defender feature (offline, before the first boot) ----" + "\n" +
+               "\"%DISM%\" /English /Image:%TARGET%\\ /Disable-Feature /FeatureName:Windows-Defender >>\"%LOG%\" 2>&1" + "\n" +
+               "if errorlevel 1 (" + "\n" +
+               "    call :log \"!!!!! WARNING: the Windows Defender feature could not be removed; the policy-based disable still applies\"" + "\n" +
+               ") else (" + "\n" +
+               "    call :log \"      Windows Defender feature removed from the applied image\"" + "\n" +
+               ")";
     }
 
     /// <summary>

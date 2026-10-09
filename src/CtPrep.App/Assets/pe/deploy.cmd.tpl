@@ -79,6 +79,8 @@ if not "%APPLY_RC%"=="0" ( set "RESULT=APPLY_FAILED_%APPLY_RC%" & goto :fail )
 if not exist "%TARGET%\Windows\System32\config\SYSTEM" ( set "RESULT=APPLIED_SYSTEM_MISSING" & goto :fail )
 if not exist "%TARGET%\Windows\System32\Config\BCD-Template" ( set "RESULT=BCD_TEMPLATE_MISSING" & goto :fail )
 
+{{DEFENDER_REMOVE}}
+
 call :log "[5/9] Staging the unattend answer files"
 call :ui 70 ANSWER_FILES
 if not exist "%TARGET%\Windows\Panther" md "%TARGET%\Windows\Panther"

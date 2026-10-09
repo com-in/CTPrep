@@ -121,7 +121,11 @@ public sealed class DeployOptions
     /// </summary>
     public bool DisableDeviceEncryption { get; set; } = true;
 
-    /// <summary>首次进入系统前禁用 Windows Defender（策略注册表 + 停用相关服务）。</summary>
+    /// <summary>
+    /// 移除 Windows Defender：在 PE 里对铺好但未启动的映像离线卸载该功能（DisableDefender 功能名
+    /// Windows-Defender）。仅靠策略禁用会被篡改防护改回来，卸载后才不会出现。
+    /// SetupComplete 里仍会写一遍策略作为卸载失败时的兜底。
+    /// </summary>
     public bool DisableDefender { get; set; }
 
     // ---------- 驱动 ----------

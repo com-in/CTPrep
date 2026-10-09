@@ -5,7 +5,8 @@ rem
 rem  Windows runs this automatically as SYSTEM after OOBE:
 rem    1. installs the staged driver packages
 rem    2. clears the password flags of the first account
-rem    3. optionally disables Windows Defender
+rem    3. optionally applies the Defender policies
+rem       (fallback: the feature itself is removed offline in the PE, earlier)
 rem    4. removes the answer file and the temporary files
 rem  The installer switches below are generic; adjust them for unusual packages.
 rem

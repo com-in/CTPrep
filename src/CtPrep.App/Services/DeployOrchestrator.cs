@@ -544,7 +544,7 @@ public sealed class DeployOrchestrator
 
         _log.Info($"分区方案       : {options.PartitionScheme}");
         _log.Info($"格式化引导分区 : {(options.FormatBootPartition ? "是" : "否")}");
-        _log.Info($"禁用 Defender  : {(options.DisableDefender ? "是" : "否")}");
+        _log.Info($"移除 Defender  : {(options.DisableDefender ? "是" : "否")}");
         _log.Info($"固件           : {options.Firmware}");
         _log.Info($"安装方式       : {options.InstallMode}");
         _log.Info($"驱动包         : {(options.DriverSources.Count == 0 ? "无" : string.Join(", ", options.DriverSources))}");
