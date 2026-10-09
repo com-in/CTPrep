@@ -133,7 +133,7 @@
   "Progress.ParseImage": "Reading the Windows image...",
   "Progress.ReadEditions": "Reading the editions inside the image...",
   "Progress.PrepareDrivers": "Preparing driver packages...",
-  "Progress.PrepareStaging": "Preparing the staging partition (the volume may need shrinking)...",
+  "Progress.PrepareStaging": "Preparing the staging partition...",
   "Progress.CopyPayload": "Copying the image and driver packages to the staging partition...",
   "Progress.InjectAutorun": "Injecting the WinPE autorun script...",
   "Progress.RegisterBoot": "Registering the WinPE boot entry...",

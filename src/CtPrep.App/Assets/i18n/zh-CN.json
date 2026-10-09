@@ -133,7 +133,7 @@
   "Progress.ParseImage": "解析系统映像...",
   "Progress.ReadEditions": "读取镜像内的版本列表...",
   "Progress.PrepareDrivers": "准备驱动包...",
-  "Progress.PrepareStaging": "准备暂存分区（可能需要压缩卷）...",
+  "Progress.PrepareStaging": "准备暂存分区...",
   "Progress.CopyPayload": "复制映像与驱动包到暂存分区...",
   "Progress.InjectAutorun": "注入 PE 自动运行脚本...",
   "Progress.RegisterBoot": "注册 PE 引导项...",
