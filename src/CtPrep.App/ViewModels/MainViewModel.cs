@@ -344,14 +344,11 @@ public sealed class MainViewModel : ObservableObject
         }
 
         // 选了本地镜像就取消「安装其他系统」的选择：两种来源只能选其一
-        if (!string.IsNullOrEmpty(_noviceSelectedVersion))
-        {
-            _noviceSelectedVersion = null;
-            OnPropertyChanged(nameof(NoviceSelectedVersion));
-            OnPropertyChanged(nameof(NoviceHint));
-        }
-
+        NoviceSelectedVersion = null;
         NoviceImageFile = file;
+        // 顺带把版本面板收起：本地镜像优先，留一个没选中项的下拉框在那儿，
+        // 看起来就像「安装其他系统」点了没反应。清除本地镜像时会恢复展开。
+        NoviceVersionsVisible = false;
         _log.Info(T("Msg.LocalImagePicked", file));
         return Task.CompletedTask;
     }
@@ -364,6 +361,8 @@ public sealed class MainViewModel : ObservableObject
         }
 
         NoviceImageFile = string.Empty;
+        // 本地镜像清掉后，如果之前拉过版本列表就恢复展开，省得再点一次「安装其他系统」
+        NoviceVersionsVisible = _noviceVersions.Count > 0;
         _log.Info(T("Msg.LocalImageCleared"));
         return Task.CompletedTask;
     }
@@ -418,6 +417,9 @@ public sealed class MainViewModel : ObservableObject
     private Task ResetVersionAsync()
     {
         NoviceSelectedVersion = null;
+        // 连面板一起收起：版本本来就可能是 null（选过本地镜像时已被清掉），
+        // 只清版本的话界面纹丝不动，看着像点了没反应。收起才是「回到全自动」的可见反馈。
+        NoviceVersionsVisible = false;
         return Task.CompletedTask;
     }
 
