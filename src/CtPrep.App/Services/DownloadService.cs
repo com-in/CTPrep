@@ -87,12 +87,19 @@ public sealed class DownloadService
     /// 把 <paramref name="source"/>（URL 或本地路径）落到 <paramref name="targetDirectory"/>，
     /// 返回最终文件路径。已存在且大小一致时直接复用。
     /// </summary>
+    /// <param name="keepLocalInPlace">
+    /// 本地文件直接用原路径，不再复制进 <paramref name="targetDirectory"/>。
+    /// 系统镜像走这条：ISO 挂载后只需要把 install.wim / install.esd 复制出来，
+    /// 再把整份 ISO 复制一份进运行时目录纯粹是多占几个 GB。
+    /// 调用方必须保证不删除返回的路径——那是用户自己的文件。
+    /// </param>
     public async Task<string> AcquireAsync(
         string source,
         string targetDirectory,
         string? expectedSha256,
         IProgress<DownloadProgress>? progress,
-        CancellationToken ct = default)
+        CancellationToken ct = default,
+        bool keepLocalInPlace = false)
     {
         if (string.IsNullOrWhiteSpace(source))
         {
@@ -105,6 +112,13 @@ public sealed class DownloadService
         var localCandidate = ConfigService.ResolvePath(source);
         if (IsLocalSource(source))
         {
+            if (keepLocalInPlace)
+            {
+                _log.Info($"使用本地镜像原文件（不再复制一份进运行时目录）：{localCandidate}");
+                await VerifyHashAsync(localCandidate, expectedSha256, ct).ConfigureAwait(false);
+                return localCandidate;
+            }
+
             var destLocal = Path.Combine(targetDirectory, Path.GetFileName(localCandidate));
             if (!string.Equals(Path.GetFullPath(localCandidate), Path.GetFullPath(destLocal), StringComparison.OrdinalIgnoreCase))
             {

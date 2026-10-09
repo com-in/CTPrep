@@ -1000,10 +1000,12 @@ public sealed class MainViewModel : ObservableObject
             // 本地文件是复制进来的，文案要说「复制」，别把读本地盘说成下载
             var copyLocal = DownloadService.IsLocalSource(source);
             StatusText = T(copyLocal ? "Status.AnalyzingLocal" : "Status.Analyzing");
+            // 本地镜像直接用原文件挂载，不复制进 downloads（整份复制一份纯属多占空间）
             var file = await _download
                 .AcquireAsync(source, Path.Combine(_config.RuntimeDir, "downloads", "image"), expectedSha256,
                     new Progress<DownloadProgress>(p =>
-                        StatusText = T(copyLocal ? "Status.CopyImage" : "Status.DownloadImage", p.Display)), ct)
+                        StatusText = T(copyLocal ? "Status.CopyImage" : "Status.DownloadImage", p.Display)), ct,
+                    keepLocalInPlace: true)
                 .ConfigureAwait(true);
 
             var work = Path.Combine(_config.RuntimeDir, "work", "image");

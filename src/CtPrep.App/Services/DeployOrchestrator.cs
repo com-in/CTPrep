@@ -92,8 +92,11 @@ public sealed class DeployOrchestrator
             Report(progress, DeployStage.Download, 50 + (int)((p.Percent ?? 0) * 50),
                 T(imageIsLocal ? "Progress.CopyImageItem" : "Progress.DownloadImageItem", p.Display)));
 
+        // 本地镜像直接用用户原文件（挂载后只把 install.wim/esd 复制出来），
+        // 不再整份复制进 downloads —— 否则原 ISO、ISO 副本、分出的 wim 会同时占三份空间。
         var imageFile = await _download
-            .AcquireAsync(options.ImageSource, Path.Combine(downloadRoot, "image"), options.ImageSha256, imageDownloadProgress, ct)
+            .AcquireAsync(options.ImageSource, Path.Combine(downloadRoot, "image"), options.ImageSha256,
+                imageDownloadProgress, ct, keepLocalInPlace: true)
             .ConfigureAwait(false);
 
         ct.ThrowIfCancellationRequested();
@@ -105,8 +108,10 @@ public sealed class DeployOrchestrator
         Report(progress, DeployStage.ExtractImage, 70, T("Progress.ParseImage"));
         var installImage = await _images.ExtractInstallImageAsync(imageFile, Path.Combine(workRoot, "image"), ct).ConfigureAwait(false);
 
-        // 下载的 ISO 已无用途，及时删除释放空间
-        if (!string.Equals(imageFile, installImage, StringComparison.OrdinalIgnoreCase) &&
+        // 下载来的 ISO 已无用途，及时删除释放空间。
+        // 本地镜像走的是用户原文件（没有复制），这里绝不能删——删掉就是删用户的文件。
+        if (!imageIsLocal &&
+            !string.Equals(imageFile, installImage, StringComparison.OrdinalIgnoreCase) &&
             Path.GetExtension(imageFile).Equals(".iso", StringComparison.OrdinalIgnoreCase))
         {
             TryDelete(imageFile);
@@ -235,8 +240,17 @@ public sealed class DeployOrchestrator
 
             _log.Info(T("Progress.PrepareDone"));
 
-            // 映像已经落到暂存分区，删除工作目录里的中间文件释放 C 盘空间
-            TryDeleteUnder(workRoot, installImage, bootWim);
+            // 映像已经落到暂存分区，删除工作目录里的中间文件释放 C 盘空间。
+            // 本地镜像用的是用户原文件（installImage 可能就在用户盘上），绝不能进清理列表；
+            // TryDeleteUnder 的路径前缀检查通常已挡住，这里是双保险。
+            if (imageIsLocal)
+            {
+                TryDeleteUnder(workRoot, bootWim);
+            }
+            else
+            {
+                TryDeleteUnder(workRoot, installImage, bootWim);
+            }
 
             if (options.RebootAfterPrepare)
             {
