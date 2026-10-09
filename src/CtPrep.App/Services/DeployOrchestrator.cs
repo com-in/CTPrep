@@ -72,6 +72,15 @@ public sealed class DeployOrchestrator
             throw new InvalidOperationException(T("Msg.NoEsp"));
         }
 
+        // BitLocker 保护中的系统盘：压缩分区会失败，写引导库也可能被拒（bcdedit 报「系统找不到指定的文件」）。
+        // 只在「确实处于保护状态」时拦；家庭版等没有 BitLocker 组件时 Available=false，不拦。
+        var sysLetter = _storage.GetSystemDriveLetter();
+        var bitLocker = await _storage.GetBitLockerStatusAsync(sysLetter, ct).ConfigureAwait(false);
+        if (bitLocker.Available && bitLocker.Protected)
+        {
+            throw new InvalidOperationException(T("Msg.BitLockerProtected", sysLetter));
+        }
+
         // ---------- 1. 下载 / 复制 ----------
         // 来源是本机文件时 AcquireAsync 走的是复制，文案要说「复制」而不是「下载」
         var peIsLocal = DownloadService.IsLocalSource(options.PeSource);
@@ -138,10 +147,25 @@ public sealed class DeployOrchestrator
 
         // ---------- 4. 准备驱动包 ----------
         var driverDirs = new List<string>();
+
+        // 导出当前系统已装的驱动：重装后网卡驱动丢失是最常见的「装完不能用」。
+        // Windows 7 的 pnputil 没有 /export-driver，导出会失败并自动跳过。
+        if (options.ExportCurrentDrivers)
+        {
+            Report(progress, DeployStage.PrepareStaging, 77, T("Progress.ExportDrivers"));
+            var exported = await _images
+                .ExportCurrentDriversAsync(Path.Combine(workRoot, "drivers-export"), ct)
+                .ConfigureAwait(false);
+            if (exported is not null)
+            {
+                driverDirs.Add(exported);
+            }
+        }
+
         if (options.DriverSources.Count > 0)
         {
             Report(progress, DeployStage.PrepareStaging, 78, T("Progress.PrepareDrivers"));
-            driverDirs = await _images
+            driverDirs.AddRange(await _images
                 .StageDriversAsync(
                     options.DriverSources,
                     runtime,
@@ -149,7 +173,7 @@ public sealed class DeployOrchestrator
                     new Progress<DownloadProgress>(),
                     _download,
                     ct)
-                .ConfigureAwait(false);
+                .ConfigureAwait(false));
         }
 
         // ---------- 5. 准备暂存分区 ----------
@@ -239,6 +263,14 @@ public sealed class DeployOrchestrator
             await _boot.ScheduleOnceAsync(entry.Guid, ct).ConfigureAwait(false);
 
             _log.Info(T("Progress.PrepareDone"));
+
+            // 载荷已经写进暂存分区，先前下载/复制进来的那几 GB 就没用了。
+            // TryDeleteUnder 的路径前缀检查保证只删下载目录内的文件：
+            // 本地镜像走的是用户原文件（不在 downloads 下），不会被删。
+            if (options.CleanupDownloads)
+            {
+                TryDeleteUnder(downloadRoot, peFile, imageFile);
+            }
 
             // 映像已经落到暂存分区，删除工作目录里的中间文件释放 C 盘空间。
             // 本地镜像用的是用户原文件（installImage 可能就在用户盘上），绝不能进清理列表；

@@ -21,6 +21,7 @@ public sealed class MainViewModel : ObservableObject
     private readonly LinkManifestService _manifests;
     private readonly DismService _dism;
     private readonly ImageService _images;
+    private readonly DiagnosticsService _diagnostics;
     private readonly DeployOrchestrator _orchestrator;
 
     private CancellationTokenSource? _cts;
@@ -41,6 +42,7 @@ public sealed class MainViewModel : ObservableObject
         _manifests = new LinkManifestService(_download, log);
         _dism = new DismService(_runner, log);
         _images = new ImageService(_runner, log, _dism);
+        _diagnostics = new DiagnosticsService(log);
         var boot = new BootService(_runner, log);
         var payload = new PePayloadService(_runner, _dism, log);
 
@@ -59,6 +61,7 @@ public sealed class MainViewModel : ObservableObject
         ClearNoviceImageCommand = new RelayCommand(ClearNoviceImageAsync, () => !IsBusy);
         PickOtherImageCommand = new RelayCommand(PickOtherImageAsync, () => !IsBusy && !IsLoadingVersions);
         ResetVersionCommand = new RelayCommand(ResetVersionAsync, () => !IsBusy);
+        SuspendBitLockerCommand = new RelayCommand(SuspendBitLockerAsync, () => !IsBusy && BitLockerProtected);
         CancelRebootCommand = new RelayCommand(CancelRebootAsync);
 
         _rebootTimer = new System.Windows.Threading.DispatcherTimer
@@ -67,6 +70,7 @@ public sealed class MainViewModel : ObservableObject
         };
         _rebootTimer.Tick += OnRebootTimerTick;
         OpenRuntimeCommand = new RelayCommand(OpenRuntimeAsync);
+        ExportDiagnosticsCommand = new RelayCommand(ExportDiagnosticsAsync, () => !IsBusy);
         CancelCommand = new RelayCommand(CancelAsync, () => IsBusy);
 
         // 日志合并刷新：部署期间日志行产生很快，逐行重建整段文本会让 UI 线程反复
@@ -87,6 +91,8 @@ public sealed class MainViewModel : ObservableObject
         EnsureTimeZoneOption(ExpertTimeZone);
         ExpertStagingSizeMB = _custom.StagingSizeMB;
         ExpertDryRun = _custom.DryRun;
+        ExpertExportDrivers = _custom.ExportCurrentDrivers;
+        ExpertCleanupDownloads = _custom.CleanupDownloads;
         ExpertDrivers = string.Join(Environment.NewLine, _custom.DriverSources);
     }
 
@@ -329,11 +335,34 @@ public sealed class MainViewModel : ObservableObject
         }
     }
 
+    private bool _bitLockerProtected;
+    public bool BitLockerProtected
+    {
+        get => _bitLockerProtected;
+        set
+        {
+            if (SetProperty(ref _bitLockerProtected, value))
+            {
+                // 「暂停保护」按钮只在确实处于保护状态时才有意义
+                (SuspendBitLockerCommand as RelayCommand)?.RaiseCanExecuteChanged();
+            }
+        }
+    }
+
+    private string _bitLockerWarning = string.Empty;
+    public string BitLockerWarning
+    {
+        get => _bitLockerWarning;
+        set => SetProperty(ref _bitLockerWarning, value);
+    }
+
     public ICommand OneClickCommand { get; }
     public ICommand BrowseNoviceImageCommand { get; }
     public ICommand ClearNoviceImageCommand { get; }
     public ICommand PickOtherImageCommand { get; }
     public ICommand ResetVersionCommand { get; }
+    public ICommand SuspendBitLockerCommand { get; }
+    public ICommand ExportDiagnosticsCommand { get; }
 
     private Task BrowseNoviceImageAsync()
     {
@@ -496,6 +525,8 @@ public sealed class MainViewModel : ObservableObject
                 StagingLabel = _config.StagingLabel,
                 TargetLabel = _config.TargetLabel,
                 DryRun = _config.DryRun,
+                ExportCurrentDrivers = _config.ExportCurrentDrivers,
+                CleanupDownloads = _config.CleanupDownloads,
                 RebootAfterPrepare = true,
                 // 新手模式选装其它系统：把选中的版本名记下来，确认框里显示它而不是地址
                 UserImageLabel = string.IsNullOrEmpty(_noviceSelectedVersion) ? null : _noviceSelectedVersion,
@@ -912,6 +943,22 @@ public sealed class MainViewModel : ObservableObject
         set => SetProperty(ref _expertDryRun, value);
     }
 
+    /// <summary>高级设置：是否导出当前系统驱动并随新系统一起安装。</summary>
+    private bool _expertExportDrivers = true;
+    public bool ExpertExportDrivers
+    {
+        get => _expertExportDrivers;
+        set => SetProperty(ref _expertExportDrivers, value);
+    }
+
+    /// <summary>高级设置：准备完成后是否删掉已消耗的下载文件。</summary>
+    private bool _expertCleanupDownloads = true;
+    public bool ExpertCleanupDownloads
+    {
+        get => _expertCleanupDownloads;
+        set => SetProperty(ref _expertCleanupDownloads, value);
+    }
+
     private bool _expertReboot = true;
     public bool ExpertReboot
     {
@@ -1101,6 +1148,8 @@ public sealed class MainViewModel : ObservableObject
                 StagingLabel = _custom.StagingLabel,
                 TargetLabel = _custom.TargetLabel,
                 DryRun = ExpertDryRun,
+                ExportCurrentDrivers = ExpertExportDrivers,
+                CleanupDownloads = ExpertCleanupDownloads,
                 RebootAfterPrepare = ExpertReboot,
                 ShutdownAfterDeploy = ExpertShutdown,
             };
@@ -1325,7 +1374,36 @@ public sealed class MainViewModel : ObservableObject
             _log.Info(disk.ToString());
         }
 
+        // BitLocker：保护中的系统盘会挡住「压缩分区」和「写引导库」，提前探测并给出暂停入口
+        await RefreshBitLockerAsync(systemDrive, ct).ConfigureAwait(true);
+
         return info;
+    }
+
+    /// <summary>刷新系统盘的 BitLocker 状态与提示文案。</summary>
+    private async Task RefreshBitLockerAsync(string systemDrive, CancellationToken ct)
+    {
+        var status = await _storage.GetBitLockerStatusAsync(systemDrive, ct).ConfigureAwait(true);
+        BitLockerProtected = status.Available && status.Protected;
+        BitLockerWarning = BitLockerProtected ? T("BitLocker.Warning", systemDrive) : string.Empty;
+    }
+
+    /// <summary>暂停系统盘的 BitLocker 保护（保持暂停直到手动恢复）。</summary>
+    private async Task SuspendBitLockerAsync()
+    {
+        await RunGuardedAsync(async ct =>
+        {
+            var drive = _storage.GetSystemDriveLetter();
+            StatusText = T("BitLocker.Suspending");
+            var ok = await _storage.SuspendBitLockerAsync(drive, ct).ConfigureAwait(true);
+            if (!ok)
+            {
+                throw new InvalidOperationException(T("BitLocker.SuspendFailed", drive));
+            }
+
+            await RefreshBitLockerAsync(drive, ct).ConfigureAwait(true);
+            StatusText = T("BitLocker.Suspended", drive);
+        }).ConfigureAwait(true);
     }
 
     private async Task RefreshAsync()
@@ -1335,6 +1413,38 @@ public sealed class MainViewModel : ObservableObject
             await DetectAsync(ct).ConfigureAwait(true);
             StatusText = T("Status.Detected");
         }).ConfigureAwait(true);
+    }
+
+    /// <summary>导出诊断包（日志 + 配置 + 现场信息），便于反馈问题。</summary>
+    private async Task ExportDiagnosticsAsync()
+    {
+        await RunGuardedAsync(async ct =>
+        {
+            StatusText = T("Diagnostics.Creating");
+            var zip = await Task.Run(
+                () => _diagnostics.CreateBundle(_config.RuntimeDir, DiagnosticsInfo()),
+                ct).ConfigureAwait(true);
+
+            StatusText = T("Diagnostics.Done", zip);
+            _log.Info(T("Diagnostics.Done", zip));
+        }).ConfigureAwait(true);
+    }
+
+    /// <summary>写进诊断包的现场信息：系统信息文本 + 磁盘分区清单。</summary>
+    private string DiagnosticsInfo()
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine(SystemInfoText);
+        sb.AppendLine();
+        if (_disks is not null)
+        {
+            foreach (var disk in _disks)
+            {
+                sb.AppendLine(disk.ToString());
+            }
+        }
+
+        return sb.ToString();
     }
 
     private Task OpenRuntimeAsync()
@@ -1491,5 +1601,7 @@ public sealed class MainViewModel : ObservableObject
         // 漏掉会让部署/拉取期间仍可点击。
         (PickOtherImageCommand as RelayCommand)?.RaiseCanExecuteChanged();
         (ResetVersionCommand as RelayCommand)?.RaiseCanExecuteChanged();
+        (SuspendBitLockerCommand as RelayCommand)?.RaiseCanExecuteChanged();
+        (ExportDiagnosticsCommand as RelayCommand)?.RaiseCanExecuteChanged();
     }
 }

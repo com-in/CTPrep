@@ -244,6 +244,103 @@ Write-Output ('CREATED|' + $free + '|' + ($free + ':\' + $label) + '|' + [int]$n
         return string.IsNullOrWhiteSpace(env) ? "C" : env.TrimEnd(':');
     }
 
+    // ---------- BitLocker ----------
+
+    /// <summary>
+    /// 查询某个卷的 BitLocker 保护状态。
+    /// 家庭版 / 没装 BitLocker 组件的系统上 Get-BitLockerVolume 不存在，
+    /// 此时返回 Available=false（按未加密处理），绝不因为探测不到就阻断部署。
+    /// </summary>
+    public async Task<BitLockerStatus> GetBitLockerStatusAsync(string? letter, CancellationToken ct = default)
+    {
+        var drive = (letter ?? string.Empty).Trim().TrimEnd(':');
+        if (drive.Length != 1)
+        {
+            return BitLockerStatus.Unknown;
+        }
+
+        var script = $@"
+$ErrorActionPreference = 'Stop'
+$mp = '{drive}:'
+try {{
+    $v = Get-BitLockerVolume -MountPoint $mp -ErrorAction Stop
+}} catch {{
+    Write-Output 'UNAVAILABLE'
+    exit 0
+}}
+if ($null -eq $v) {{ Write-Output 'UNAVAILABLE'; exit 0 }}
+$prot = [string]$v.ProtectionStatus
+$pct = 0
+try {{ $pct = [int]$v.EncryptionPercentage }} catch {{ $pct = 0 }}
+Write-Output ('STATUS|' + $prot + '|' + $pct)
+";
+        // 探测失败（组件缺失、权限、WMI 异常）都不能中断流程，只看输出
+        var result = await _runner.RunPowerShellAsync(script, null, ct).ConfigureAwait(false);
+        var line = (result.StdOut ?? string.Empty)
+            .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+            .Select(value => value.Trim())
+            .LastOrDefault(value => value == "UNAVAILABLE" ||
+                                    value.StartsWith("STATUS|", StringComparison.Ordinal));
+        if (string.IsNullOrEmpty(line) || line == "UNAVAILABLE")
+        {
+            return BitLockerStatus.Unknown;
+        }
+
+        var parts = line.Split('|');
+        var on = parts.Length > 1 && parts[1].Equals("On", StringComparison.OrdinalIgnoreCase);
+        var pct = parts.Length > 2 && int.TryParse(parts[2], out var parsed) ? parsed : 0;
+        return new BitLockerStatus(true, on, pct);
+    }
+
+    /// <summary>
+    /// 暂停 BitLocker 保护。RebootCount 0 表示一直保持暂停，直到手动恢复——
+    /// 重装要重启多次，用默认值 1 会在第一次重启后自动恢复保护，等于没暂停。
+    /// </summary>
+    public async Task<bool> SuspendBitLockerAsync(string? letter, CancellationToken ct = default)
+    {
+        var drive = (letter ?? string.Empty).Trim().TrimEnd(':');
+        if (drive.Length != 1)
+        {
+            return false;
+        }
+
+        var script = $@"
+$ErrorActionPreference = 'Stop'
+Suspend-BitLocker -MountPoint '{drive}:' -RebootCount 0
+";
+        var result = await _runner.RunPowerShellAsync(script, null, ct).ConfigureAwait(false);
+        if (result.ExitCode == 0)
+        {
+            return true;
+        }
+
+        _log.Warn($"暂停 BitLocker 失败（{drive}:）：{result.Combined}");
+        return false;
+    }
+
+    /// <summary>恢复 BitLocker 保护（装完系统后手动调用）。</summary>
+    public async Task<bool> ResumeBitLockerAsync(string? letter, CancellationToken ct = default)
+    {
+        var drive = (letter ?? string.Empty).Trim().TrimEnd(':');
+        if (drive.Length != 1)
+        {
+            return false;
+        }
+
+        var script = $@"
+$ErrorActionPreference = 'Stop'
+Resume-BitLocker -MountPoint '{drive}:'
+";
+        var result = await _runner.RunPowerShellAsync(script, null, ct).ConfigureAwait(false);
+        if (result.ExitCode == 0)
+        {
+            return true;
+        }
+
+        _log.Warn($"恢复 BitLocker 失败（{drive}:）：{result.Combined}");
+        return false;
+    }
+
     // ---------- JSON 辅助 ----------
 
     private static IEnumerable<JsonElement> AsArray(JsonElement element)

@@ -65,6 +65,7 @@ public sealed class ConfigService
         {
             RuntimeDir = ResolvePath(ini.GetString("General", "RuntimeDir", @".\runtime")),
             DryRun = ini.GetBool("General", "DryRun", false),
+            CleanupDownloads = ini.GetBool("General", "CleanupDownloads", true),
             LogLevel = ParseLogLevel(ini.GetString("General", "LogLevel", "Info")),
             Language = ini.GetString("General", "Language", LocalizationService.AutoValue),
 
@@ -78,6 +79,8 @@ public sealed class ConfigService
                 .Equals("KeepFiles", StringComparison.OrdinalIgnoreCase)
                 ? InstallMode.KeepFiles
                 : InstallMode.Clean,
+
+            ExportCurrentDrivers = ini.GetBool("Drivers", "ExportCurrent", true),
         };
 
         // [PE]
@@ -114,8 +117,15 @@ public sealed class ConfigService
         }
 
         // [Drivers]
-        foreach (var (_, value) in ini.Section("Drivers"))
+        // 这一段里除 ExportCurrent 之外的键都是驱动包（值即路径 / URL）。
+        // ExportCurrent 是开关，必须排除，否则它的 "1" 会被当成一个驱动包路径。
+        foreach (var (key, value) in ini.Section("Drivers"))
         {
+            if (key.Equals("ExportCurrent", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
             if (!string.IsNullOrWhiteSpace(value))
             {
                 config.DriverSources.Add(value);

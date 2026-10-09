@@ -9,6 +9,12 @@ public sealed class AppConfig
     /// <summary>演练模式：只打印命令，不做真实磁盘改动。</summary>
     public bool DryRun { get; set; }
 
+    /// <summary>
+    /// 载荷写进暂存分区后，是否删掉先前下载/复制进运行时目录的那几 GB。
+    /// 关掉可以保留下载缓存，下次重装不用重新下载。
+    /// </summary>
+    public bool CleanupDownloads { get; set; } = true;
+
     public LogLevel LogLevel { get; set; } = LogLevel.Info;
 
     /// <summary>
@@ -31,6 +37,12 @@ public sealed class AppConfig
 
     /// <summary>驱动包列表（原样保留配置值，可能是 URL 也可能是本地路径）。</summary>
     public List<string> DriverSources { get; } = new();
+
+    /// <summary>
+    /// 是否导出当前系统已装的第三方驱动，随新系统一起安装。
+    /// 重装后网卡驱动丢失是最常见的「装完不能用」，所以默认开。
+    /// </summary>
+    public bool ExportCurrentDrivers { get; set; } = true;
 
     public int StagingSizeMB { get; set; } = 12288;
     public string StagingLabel { get; set; } = "CTPREP";

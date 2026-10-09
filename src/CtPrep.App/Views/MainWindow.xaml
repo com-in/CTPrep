@@ -261,6 +261,9 @@
                                          VerticalScrollBarVisibility="Auto" TextWrapping="NoWrap"
                                          VerticalContentAlignment="Top"
                                          FontFamily="{StaticResource MonoFont}" FontSize="12" />
+                                <CheckBox Content="{loc:Loc Drivers.ExportCurrent}" Margin="0,8,0,0"
+                                          IsChecked="{Binding ExpertExportDrivers}"
+                                          ToolTip="{loc:Loc Drivers.ExportCurrentTooltip}" />
 
                                 <Border Style="{StaticResource Divider}" />
 
@@ -268,6 +271,9 @@
                                 <TextBlock Text="{loc:Loc Behavior.Title}" Style="{StaticResource SectionText}" />
                                 <CheckBox Content="{loc:Loc Behavior.Reboot}" IsChecked="{Binding ExpertReboot}" />
                                 <CheckBox Content="{loc:Loc Behavior.Shutdown}" IsChecked="{Binding ExpertShutdown}" />
+                                <CheckBox Content="{loc:Loc Behavior.CleanupDownloads}"
+                                          IsChecked="{Binding ExpertCleanupDownloads}"
+                                          ToolTip="{loc:Loc Behavior.CleanupDownloadsTooltip}" />
                                 <CheckBox Content="{loc:Loc Behavior.DryRun}"
                                           IsChecked="{Binding ExpertDryRun}"
                                           Foreground="{StaticResource DangerBrush}" Margin="0,0,0,10" />
@@ -316,6 +322,30 @@
                                            Margin="0,0,0,10" />
                                 <TextBlock Text="{loc:Loc Info.RuntimeDir}" Style="{StaticResource LabelText}" Margin="0,0,0,2" />
                                 <TextBlock Text="{Binding RuntimeDir, Mode=OneWay}" Style="{StaticResource InfoText}" />
+
+                                <!-- BitLocker：保护中的系统盘会挡住压缩分区与写引导库 -->
+                                <Border Margin="0,10,0,0" Padding="10,6"
+                                        Background="{StaticResource TrackBrush}"
+                                        BorderBrush="{StaticResource WarnBorder}" BorderThickness="1"
+                                        CornerRadius="{StaticResource RadiusControl}">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding BitLockerProtected}" Value="False">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding BitLockerWarning, Mode=OneWay}"
+                                                   Style="{StaticResource HintText}"
+                                                   Foreground="{StaticResource WarnText}" TextWrapping="Wrap" />
+                                        <Button Content="{loc:Loc BitLocker.Suspend}" Style="{StaticResource SecondaryButton}"
+                                                Command="{Binding SuspendBitLockerCommand}"
+                                                HorizontalAlignment="Left" Margin="0,8,0,0" Padding="10,4" />
+                                    </StackPanel>
+                                </Border>
                             </StackPanel>
                         </Border>
 
@@ -325,7 +355,17 @@
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="*" />
                                 </Grid.RowDefinitions>
-                                <TextBlock Grid.Row="0" Text="{loc:Loc Log.Title}" Style="{StaticResource CaptionText}" Margin="0,0,0,6" />
+                                <Grid Grid.Row="0" Margin="0,0,0,6">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="{loc:Loc Log.Title}" Style="{StaticResource CaptionText}" />
+                                    <Button Grid.Column="1" Content="{loc:Loc Diagnostics.Export}"
+                                            Style="{StaticResource SecondaryButton}"
+                                            Command="{Binding ExportDiagnosticsCommand}"
+                                            Padding="10,3" />
+                                </Grid>
                                 <Border Grid.Row="1" Background="{StaticResource LogBackground}"
                                         CornerRadius="{StaticResource RadiusControl}">
                                     <TextBox x:Name="LogBox" Padding="8" Text="{Binding LogText, Mode=OneWay}"

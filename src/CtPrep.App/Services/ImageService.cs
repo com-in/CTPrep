@@ -383,6 +383,43 @@ Write-Output ([string]$vol.DriveLetter)
         }
     }
 
+    /// <summary>
+    /// 导出当前系统已安装的第三方驱动（pnputil /export-driver）。
+    /// Windows 7 的 pnputil 没有 /export-driver，会直接失败；这里靠退出码判断后跳过，
+    /// 不去做版本探测——版本探测在这类场景里比看退出码更容易误判。
+    /// </summary>
+    /// <returns>导出目录；失败或没有导出到任何 .inf 时返回 null，调用方跳过即可。</returns>
+    public async Task<string?> ExportCurrentDriversAsync(string destDir, CancellationToken ct = default)
+    {
+        var pnputil = Path.Combine(Environment.SystemDirectory, "pnputil.exe");
+        if (!File.Exists(pnputil))
+        {
+            _log.Warn("未找到 pnputil.exe，跳过当前系统驱动导出。");
+            return null;
+        }
+
+        Directory.CreateDirectory(destDir);
+        var result = await _runner
+            .RunAsync(pnputil, $"/export-driver * \"{destDir}\"", null, ct)
+            .ConfigureAwait(false);
+
+        if (result.ExitCode != 0)
+        {
+            _log.Warn($"导出当前系统驱动失败（pnputil 退出码 {result.ExitCode}），已跳过。{result.Combined}");
+            return null;
+        }
+
+        var infCount = Directory.GetFiles(destDir, "*.inf", SearchOption.AllDirectories).Length;
+        if (infCount == 0)
+        {
+            _log.Warn($"驱动导出命令成功，但目录里没有 .inf，已跳过：{destDir}");
+            return null;
+        }
+
+        _log.Info($"已导出当前系统驱动 {infCount} 个包：{destDir}");
+        return destDir;
+    }
+
     /// <summary>读取 config.ini 里 [Drivers] 指定的驱动包并解压到目标目录，返回收集到的 inf 文件所在目录集合。</summary>
     public async Task<List<string>> StageDriversAsync(
         IEnumerable<string> sources,

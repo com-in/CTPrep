@@ -22,6 +22,18 @@ public sealed class DeployOptions
     /// </summary>
     public string? UserImageLabel { get; set; }
 
+    /// <summary>
+    /// 是否导出当前系统已装的第三方驱动，随新系统一起安装。
+    /// 重装后网卡驱动丢失是最常见的「装完不能用」，所以默认开。
+    /// </summary>
+    /// <summary>
+    /// 载荷写进暂存分区后，是否删掉先前下载/复制进运行时目录的那几 GB。
+    /// 只删位于下载目录内的文件；用户自己的本地镜像不在其中，不会被删。
+    /// </summary>
+    public bool CleanupDownloads { get; set; } = true;
+
+    public bool ExportCurrentDrivers { get; set; } = true;
+
     /// <summary>要安装的映像索引（1 起）；0 表示未指定，由程序按规则自动挑选。</summary>
     public int ImageIndex { get; set; }
 
