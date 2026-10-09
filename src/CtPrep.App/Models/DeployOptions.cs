@@ -116,6 +116,11 @@ public sealed class DeployOptions
     /// <summary>跳过 Win11 OOBE 强制联网。</summary>
     public bool BypassNetworkRequirement { get; set; } = true;
 
+    /// <summary>
+    /// 禁用设备加密：写入 PreventDeviceEncryption 策略，让新装的 Windows 11 不再自动加密整盘。
+    /// </summary>
+    public bool DisableDeviceEncryption { get; set; } = true;
+
     /// <summary>首次进入系统前禁用 Windows Defender（策略注册表 + 停用相关服务）。</summary>
     public bool DisableDefender { get; set; }
 

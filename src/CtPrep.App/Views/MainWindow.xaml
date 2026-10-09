@@ -214,6 +214,9 @@
                                 <TextBlock Text="{loc:Loc Unattend.Title}" Style="{StaticResource SectionText}" />
                                 <CheckBox Content="{loc:Loc Unattend.Enable}" IsChecked="{Binding ExpertUnattended}" />
                                 <CheckBox Content="{loc:Loc Unattend.BypassNro}" IsChecked="{Binding ExpertBypassNro}" />
+                                <CheckBox Content="{loc:Loc Unattend.DisableDeviceEncryption}"
+                                          IsChecked="{Binding ExpertDisableDeviceEncryption}"
+                                          ToolTip="{loc:Loc Unattend.DisableDeviceEncryptionTooltip}" />
                                 <CheckBox Content="{loc:Loc Unattend.DisableDefender}" IsChecked="{Binding ExpertDisableDefender}"
                                           ToolTip="{loc:Loc Unattend.DisableDefenderTooltip}"
                                           Margin="0,0,0,10" />

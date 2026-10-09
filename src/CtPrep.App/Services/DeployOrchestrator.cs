@@ -81,18 +81,16 @@ public sealed class DeployOrchestrator
             throw new InvalidOperationException(T("Msg.BitLockerProtected", sysLetter));
         }
 
-        // ---------- 1. 下载 / 复制 ----------
-        // 来源是本机文件时 AcquireAsync 走的是复制，文案要说「复制」而不是「下载」
-        var peIsLocal = DownloadService.IsLocalSource(options.PeSource);
-        Report(progress, DeployStage.Download, 0,
-            T(peIsLocal ? "Progress.CopyPe" : "Progress.DownloadPe"));
-        var downloadProgress = new Progress<DownloadProgress>(p =>
-            Report(progress, DeployStage.Download, (int)((p.Percent ?? 0) * 50),
-                T(peIsLocal ? "Progress.CopyPeItem" : "Progress.DownloadPeItem", p.Display)));
+        // ---------- 1. 取 PE 与镜像 ----------
+        // PE 已内置在发布版里，直接用本地文件，不再下载 / 解包。
+        var peFile = ConfigService.ResolvePath(options.PeSource);
+        if (!File.Exists(peFile))
+        {
+            throw new FileNotFoundException(T("Msg.NoPe", peFile));
+        }
 
-        var peFile = await _download
-            .AcquireAsync(options.PeSource, Path.Combine(downloadRoot, "pe"), options.PeSha256, downloadProgress, ct)
-            .ConfigureAwait(false);
+        _log.Info($"使用内置 PE：{peFile}");
+        Report(progress, DeployStage.Download, 0, T("Progress.UseBundledPe"));
 
         var imageIsLocal = DownloadService.IsLocalSource(options.ImageSource);
         Report(progress, DeployStage.Download, 50,
@@ -111,8 +109,8 @@ public sealed class DeployOrchestrator
         ct.ThrowIfCancellationRequested();
 
         // ---------- 2. 提取映像 ----------
-        Report(progress, DeployStage.ExtractImage, 60, T("Progress.ParsePe"));
-        var bootWim = await _images.ExtractPeWimAsync(peFile, Path.Combine(workRoot, "pe"), ct).ConfigureAwait(false);
+        // 内置 PE 就是 .wim，直接用；boot.sdi 由 PePayloadService 从它同目录取。
+        var bootWim = peFile;
 
         Report(progress, DeployStage.ExtractImage, 70, T("Progress.ParseImage"));
         var installImage = await _images.ExtractInstallImageAsync(imageFile, Path.Combine(workRoot, "image"), ct).ConfigureAwait(false);

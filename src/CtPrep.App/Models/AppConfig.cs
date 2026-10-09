@@ -49,6 +49,11 @@ public sealed class AppConfig
     public string TargetLabel { get; set; } = "Windows";
     public InstallMode DefaultInstallMode { get; set; } = InstallMode.Clean;
     public bool DefaultUnattended { get; set; } = true;
+
+    /// <summary>
+    /// 默认是否禁用设备加密（让新系统不自动整盘加密）。Windows 11 会在新机器上自动开启。
+    /// </summary>
+    public bool DisableDeviceEncryption { get; set; } = true;
     public string DefaultTimeZone { get; set; } = "China Standard Time";
 
     /// <summary>按系统信息匹配镜像；未命中返回 Default。</summary>

@@ -661,8 +661,29 @@ public sealed class PePayloadService
             .Replace("{{OOBE_BLOCK}}", RenderOobeBlock(o.WindowsMajorVersion))
             .Replace("{{TIME_ZONE}}", Escape(o.TimeZone))
             .Replace("{{BYPASS_NRO}}", o.BypassNetworkRequirement ? "1" : "0")
+            .Replace("{{DEVICE_ENCRYPTION_BLOCK}}", RenderDeviceEncryptionBlock(o))
             .Replace("{{MAJOR}}", majorText)
             .Replace("{{ARCH}}", arch);
+    }
+
+    /// <summary>
+    /// 禁用设备加密的 specialize 命令。Windows 11 在满足条件的新机器上会自动开启「设备加密」
+    /// （BitLocker 的自动变体，无需用户操作就加密整盘），带来恢复密钥与数据风险。
+    /// 写入 PreventDeviceEncryption 策略后新系统不会再自动加密。
+    /// specialize 阶段早于设备加密的评估，放这里最可靠；OOBE 之后再写往往为时已晚。
+    /// </summary>
+    private static string RenderDeviceEncryptionBlock(DeployOptions o)
+    {
+        if (!o.DisableDeviceEncryption)
+        {
+            return string.Empty;
+        }
+
+        return "        <RunSynchronousCommand wcm:action=\"add\">" + Environment.NewLine +
+               "          <Order>2</Order>" + Environment.NewLine +
+               "          <Description>Prevent device encryption</Description>" + Environment.NewLine +
+               "          <Path>reg add \"HKLM\\SYSTEM\\CurrentControlSet\\Control\\BitLocker\" /v PreventDeviceEncryption /t REG_DWORD /d 1 /f</Path>" + Environment.NewLine +
+               "        </RunSynchronousCommand>";
     }
 
     /// <summary>

@@ -42,6 +42,7 @@
           <Description>Skip the OOBE network requirement</Description>
           <Path>reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\OOBE" /v BypassNRO /t REG_DWORD /d {{BYPASS_NRO}} /f</Path>
         </RunSynchronousCommand>
+{{DEVICE_ENCRYPTION_BLOCK}}
       </RunSynchronous>
     </component>
   </settings>

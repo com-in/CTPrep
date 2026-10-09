@@ -93,6 +93,7 @@ public sealed class MainViewModel : ObservableObject
         ExpertDryRun = _custom.DryRun;
         ExpertExportDrivers = _custom.ExportCurrentDrivers;
         ExpertCleanupDownloads = _custom.CleanupDownloads;
+        ExpertDisableDeviceEncryption = _custom.DisableDeviceEncryption;
         ExpertDrivers = string.Join(Environment.NewLine, _custom.DriverSources);
     }
 
@@ -458,20 +459,17 @@ public sealed class MainViewModel : ObservableObject
         {
             var system = await DetectAsync(ct).ConfigureAwait(true);
 
+            // PE 已内置在发布版里（runtime\pe\boot.wim + boot.sdi），只支持本地文件，不再联网下载。
             var pe = _config.ResolvePe();
             if (pe is null)
             {
-                throw new InvalidOperationException(T("Msg.NoPe"));
+                throw new InvalidOperationException(T("Msg.NoPe", string.Empty));
             }
 
-            // PE 与镜像地址都可以是「链接清单」(.json)：先取回清单，再按本机版本挑真正的链接
-            var peUrl = pe.Url;
-            var peSha = pe.Sha256;
-            if (LinkManifestService.IsManifestUrl(peUrl))
+            var pePath = ConfigService.ResolvePath(pe.Url);
+            if (!File.Exists(pePath))
             {
-                var resolvedPe = await _manifests.ResolvePeAsync(peUrl, ct).ConfigureAwait(true);
-                peUrl = resolvedPe.Url;
-                peSha = resolvedPe.Sha256;
+                throw new InvalidOperationException(T("Msg.NoPe", pePath));
             }
 
             var image = _config.ResolveImage(system);
@@ -505,8 +503,8 @@ public sealed class MainViewModel : ObservableObject
 
             var options = new DeployOptions
             {
-                PeSource = peUrl,
-                PeSha256 = peSha,
+                PeSource = pePath,
+                PeSha256 = pe.Sha256,
                 ImageSource = imageUrl,
                 ImageSha256 = imageSha,
                 // 0 = 让程序按规则挑：本地多版本映像会弹窗，联网镜像按本机版本匹配
@@ -520,6 +518,8 @@ public sealed class MainViewModel : ObservableObject
                 // 沿用原系统用户名；检测不到时才退回默认名
                 UserName = string.IsNullOrWhiteSpace(system.UserName) ? DefaultUserName : system.UserName,
                 BypassNetworkRequirement = true,
+                // 新手模式默认禁用设备加密：Win11 装完自动整盘加密会带来恢复密钥问题
+                DisableDeviceEncryption = _config.DisableDeviceEncryption,
                 TimeZone = _config.DefaultTimeZone,
                 StagingSizeMB = _config.StagingSizeMB,
                 StagingLabel = _config.StagingLabel,
@@ -959,6 +959,14 @@ public sealed class MainViewModel : ObservableObject
         set => SetProperty(ref _expertCleanupDownloads, value);
     }
 
+    /// <summary>高级设置：禁用设备加密，让新系统不自动整盘加密。</summary>
+    private bool _expertDisableDeviceEncryption = true;
+    public bool ExpertDisableDeviceEncryption
+    {
+        get => _expertDisableDeviceEncryption;
+        set => SetProperty(ref _expertDisableDeviceEncryption, value);
+    }
+
     private bool _expertReboot = true;
     public bool ExpertReboot
     {
@@ -1076,20 +1084,21 @@ public sealed class MainViewModel : ObservableObject
         {
             var system = await DetectAsync(ct).ConfigureAwait(true);
 
-            // PE 来源固定取配置（custom.ini 优先，缺失回退 config.ini），界面不提供自定义
+            // PE 已内置在发布版里，只支持本地文件：custom.ini 优先，缺失回退 config.ini。
             var customPe = _custom.ResolvePe();
             var configPe = _config.ResolvePe();
-            var peUrl = FirstNonEmpty(customPe?.Url, configPe?.Url);
-            // SHA256 必须与最终采用的 URL 同源，否则 custom.ini 缺失时会拿空值静默跳过校验
-            var peSha = string.Equals(peUrl, configPe?.Url, StringComparison.OrdinalIgnoreCase)
-                ? configPe?.Sha256
-                : customPe?.Sha256;
-            if (LinkManifestService.IsManifestUrl(peUrl))
+            var customPePath = customPe is null ? string.Empty : ConfigService.ResolvePath(customPe.Url);
+            var configPePath = configPe is null ? string.Empty : ConfigService.ResolvePath(configPe.Url);
+            var pePath = FirstNonEmpty(customPePath, configPePath);
+            if (!File.Exists(pePath))
             {
-                var resolvedPe = await _manifests.ResolvePeAsync(peUrl, ct).ConfigureAwait(true);
-                peUrl = resolvedPe.Url;
-                peSha = resolvedPe.Sha256;
+                throw new InvalidOperationException(T("Msg.NoPe", pePath));
             }
+
+            // SHA256 必须与最终采用的那份配置同源，否则 custom.ini 缺失时会拿空值静默跳过校验
+            var peSha = string.Equals(pePath, customPePath, StringComparison.OrdinalIgnoreCase)
+                ? customPe?.Sha256
+                : configPe?.Sha256;
 
             var customFile = ExpertCustomImageFile.Trim();
             var imageUrl = customFile.Length == 0 ? ExpertImageSource.Trim() : customFile;
@@ -1121,7 +1130,7 @@ public sealed class MainViewModel : ObservableObject
 
             var options = new DeployOptions
             {
-                PeSource = peUrl,
+                PeSource = pePath,
                 // 界面不可再改 PE 地址，PE 来源就是配置里的那份，SHA256 直接套用
                 PeSha256 = peSha ?? string.Empty,
                 ImageSource = imageUrl,
@@ -1139,6 +1148,7 @@ public sealed class MainViewModel : ObservableObject
                 FormatBootPartition = ExpertFormatBootPartition,
                 Unattended = ExpertUnattended,
                 BypassNetworkRequirement = ExpertBypassNro,
+                DisableDeviceEncryption = ExpertDisableDeviceEncryption,
                 DisableDefender = ExpertDisableDefender,
                 UserName = userName,
                 Password = ExpertPassword,

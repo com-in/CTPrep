@@ -74,6 +74,7 @@ public sealed class ConfigService
             StagingLabel = ini.GetString("Deploy", "StagingLabel", "CTPREP"),
             TargetLabel = ini.GetString("Deploy", "TargetLabel", "Windows"),
             DefaultUnattended = ini.GetBool("Deploy", "DefaultUnattended", true),
+            DisableDeviceEncryption = ini.GetBool("Deploy", "DisableDeviceEncryption", true),
             DefaultTimeZone = ini.GetString("Deploy", "DefaultTimeZone", "China Standard Time"),
             DefaultInstallMode = ini.GetString("Deploy", "DefaultInstallMode", "Clean")
                 .Equals("KeepFiles", StringComparison.OrdinalIgnoreCase)
