@@ -143,17 +143,28 @@ if ($cand) {{
 $sysDrive = $env:SystemDrive.TrimEnd(':')
 $sysPart  = Get-Partition -DriveLetter $sysDrive -ErrorAction Stop
 $sysDisk  = Get-Disk -Number $sysPart.DiskNumber
-$sysVol   = Get-Volume -DriveLetter $sysDrive
 
 if ($sysDisk.PartitionStyle -eq 'RAW') {{ throw '系统磁盘分区表为 RAW，无法压缩。' }}
 
 $support = Get-PartitionSupportedSize -DiskNumber $sysPart.DiskNumber -PartitionNumber $sysPart.PartitionNumber
-$newSize = $sysVol.Size - $need
+# Resize-Partition 只接受按对齐粒度（通常 1 MiB）取整后的大小：把「当前大小 - 需要空间」
+# 这种任意字节数直接传过去会被拒，报 Size Not Supported (StorageWMI 4097)。
+# 基准必须用分区大小而不是卷大小——两者相差一个文件系统开销。
+$align    = 1048576
+$partSize = [long]$sysPart.Size
+$newSize  = [long]([math]::Floor(($partSize - $need) / $align) * $align)
 if ($newSize -lt $support.SizeMin) {{
-    throw ('可用空间不足：需要 ' + [math]::Round($need/1GB,2) + ' GB，最多只能压缩出 ' + [math]::Round(($sysVol.Size - $support.SizeMin)/1GB,2) + ' GB。请先清理磁盘或改用已有数据分区。')
+    throw ('可用空间不足：需要 ' + [math]::Round($need/1GB,2) + ' GB，最多只能压缩出 ' + [math]::Round(($partSize - $support.SizeMin)/1GB,2) + ' GB。请先清理磁盘或改用已有数据分区。')
+}}
+if ($newSize -le 0 -or $newSize -ge $partSize) {{
+    throw ('计算出的压缩目标无效：' + $newSize + ' 字节（当前分区 ' + $partSize + ' 字节）。')
 }}
 
-Resize-Partition -DiskNumber $sysPart.DiskNumber -PartitionNumber $sysPart.PartitionNumber -Size $newSize
+try {{
+    Resize-Partition -DiskNumber $sysPart.DiskNumber -PartitionNumber $sysPart.PartitionNumber -Size $newSize
+}} catch {{
+    throw ('压缩系统分区失败：' + $_.Exception.Message + '。常见原因是分区里有不可移动的文件（页面文件、休眠文件、系统还原点），可先关闭休眠、清理磁盘后再试。')
+}}
 
 $newPart = New-Partition -DiskNumber $sysPart.DiskNumber -UseMaximumSize
 # PE 固定使用 S:（EFI）、W:（目标 Windows）、B:（BIOS 系统保留分区），
