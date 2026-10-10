@@ -22,6 +22,7 @@ public sealed class MainViewModel : ObservableObject
     private readonly DismService _dism;
     private readonly ImageService _images;
     private readonly DiagnosticsService _diagnostics;
+    private readonly PlatformCapabilities _capabilities;
     private readonly DeployOrchestrator _orchestrator;
 
     private CancellationTokenSource? _cts;
@@ -37,11 +38,13 @@ public sealed class MainViewModel : ObservableObject
         _log = log;
         _runner = new ProcessRunner(log);
         _systemInfoService = new SystemInfoService(log);
-        _storage = new StorageService(_runner, log);
+        // 两个服务共用一份能力探测：Windows 7 上要分别退回 WMI 与内置 ISO 解析
+        _capabilities = new PlatformCapabilities(_runner, log);
+        _storage = new StorageService(_runner, log, _capabilities);
         _download = new DownloadService(log);
         _manifests = new LinkManifestService(_download, log);
         _dism = new DismService(_runner, log);
-        _images = new ImageService(_runner, log, _dism);
+        _images = new ImageService(_runner, log, _dism, _capabilities);
         _diagnostics = new DiagnosticsService(log);
         var boot = new BootService(_runner, log);
         var payload = new PePayloadService(_runner, _dism, log);

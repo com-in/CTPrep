@@ -22,9 +22,28 @@ Windows 重装工具。准备阶段在当前系统里跑（WPF 界面，新手 /
 
 ## 环境要求
 
-- Windows 10 / 11 x64，需要管理员权限（会修改 BCD 与磁盘分区）；
+- Windows 7 / 8 / 8.1 / 10 / 11 x64，需要管理员权限（会修改 BCD 与磁盘分区）；
+  Windows 7 上缺 Storage 模块与 ISO 挂载能力，这两处会自动退回 WMI 与内置的 ISO 解析器（详见「Windows 7 上的差异」）；
 - 暂存空间默认 12 GB（`StagingSizeMB` 可调）；
 - 两种发布版：绿色版自带 .NET 8 运行时；轻量版体积更小，但需要目标机器已装 .NET 8 桌面运行时（Windows Desktop Runtime）。
+
+## Windows 7 上的差异
+
+Win7 既没有 PowerShell 的 Storage 模块（`Get-Disk` / `Resize-Partition` 那套），也挂不了 ISO（`Mount-DiskImage`）。程序启动时会探测这两项能力，缺哪个就走对应的回退路径，Win8 及以上完全不受影响：
+
+| 环节 | Win8 及以上 | Win7 |
+| --- | --- | --- |
+| 磁盘与分区探测 | Storage 模块 | WMI（`Win32_DiskDrive` / `Win32_DiskPartition`） |
+| 准备暂存分区 | `Resize-Partition` + `New-Partition` | diskpart `shrink` + `create partition` |
+| 从 ISO 取 install.wim | 挂载后复制 | 内置解析器直接读（UDF，另带 ISO 9660 兜底） |
+
+两点已知差异：
+
+- **GPT 磁盘上的分区号**：WMI 不报告 MSR（微软保留分区），程序靠分区之间那段 16 MB 的空隙把它补回来。
+  已在含 MSR 的 GPT 盘上和 Storage 模块的结果逐项比对过（分区号、盘符、大小、ESP/引导标记全部一致），
+  但 Win7 真机上还没跑过——如果你在 Win7 + UEFI 的机器上遇到目标分区选错，把日志发我。
+- **BitLocker**：Win7 没有 BitLocker 的 PowerShell 模块，探测不到时按「未知」处理，不会拦住部署。
+  若系统盘确实加密了，请先用 `manage-bde -protectors -disable C:` 暂停保护。
 
 ## 使用
 

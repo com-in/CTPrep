@@ -9,12 +9,15 @@ public sealed class ImageService
     private readonly ProcessRunner _runner;
     private readonly ILogSink _log;
     private readonly DismService _dism;
+    private readonly PlatformCapabilities _capabilities;
 
-    public ImageService(ProcessRunner runner, ILogSink log, DismService dism)
+    public ImageService(ProcessRunner runner, ILogSink log, DismService dism,
+        PlatformCapabilities? capabilities = null)
     {
         _runner = runner;
         _log = log;
         _dism = dism;
+        _capabilities = capabilities ?? new PlatformCapabilities(runner, log);
     }
 
     /// <summary>从 ISO / WIM / ESD 中取出可部署的系统映像（install.wim 或 install.esd），返回其路径。</summary>
@@ -32,6 +35,13 @@ public sealed class ImageService
         }
 
         Directory.CreateDirectory(workDir);
+
+        // Windows 7 没有 Mount-DiskImage，挂载这条路走不通，改用内置解析器直接读文件
+        if (!await _capabilities.CanMountIsoAsync(ct).ConfigureAwait(false))
+        {
+            return await ExtractIsoWithoutMountAsync(sourcePath, workDir, ct).ConfigureAwait(false);
+        }
+
         var letter = await MountIsoAsync(sourcePath, ct).ConfigureAwait(false);
         try
         {
@@ -63,6 +73,44 @@ public sealed class ImageService
         finally
         {
             await DismountIsoAsync(sourcePath, ct).ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>
+    /// 不挂载、直接用内置解析器从 ISO 里取出 install.wim / install.esd（Windows 7 回退）。
+    /// 只读，不动原 ISO。
+    /// </summary>
+    private async Task<string> ExtractIsoWithoutMountAsync(string sourcePath, string workDir, CancellationToken ct)
+    {
+        if (!IsoReader.TryOpen(sourcePath, out var iso, out var error) || iso is null)
+        {
+            throw new InvalidOperationException($"无法读取 ISO：{sourcePath}（{error}）");
+        }
+
+        using (iso)
+        {
+            var matched = string.Empty;
+            var offset = 0L;
+            var length = 0L;
+            var found = iso.TryLocateFirst(
+                new[] { "sources/install.wim", "sources/install.esd" },
+                out matched, out offset, out length);
+
+            if (!found)
+            {
+                throw new FileNotFoundException(
+                    $"在 ISO 的 sources 目录下没有找到 install.wim / install.esd：{sourcePath}");
+            }
+
+            _log.Info($"直接读取 ISO（{iso.Mode}）：{matched}（约 {DownloadProgress.FormatSize(length)}）");
+
+            var dest = Path.Combine(workDir, Path.GetFileName(matched));
+            await iso.CopyOutAsync(offset, length, dest, null, ct).ConfigureAwait(false);
+
+            // 与挂载路径一样：先确认这份映像真的能读，再让调用方去删原文件
+            await VerifyImageAsync(dest, ct).ConfigureAwait(false);
+            TryDeleteSiblings(workDir, dest);
+            return dest;
         }
     }
 

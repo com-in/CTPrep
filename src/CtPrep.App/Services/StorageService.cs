@@ -1,18 +1,28 @@
+using System.Globalization;
+using System.Management;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using CtPrep.App.Models;
 
 namespace CtPrep.App.Services;
 
 /// <summary>分区与磁盘操作。探测走 PowerShell Storage 模块，改动走 diskpart。</summary>
+/// <remarks>
+/// Windows 7 既没有 Storage 模块也没有 Mount-DiskImage，所以两条路径都留了回退：
+/// 探测改走 WMI，改动改走 diskpart。能力判断交给 <see cref="PlatformCapabilities"/>，
+/// 不传则自行创建一个（调用方共享一份可以少探测几次）。
+/// </remarks>
 public sealed class StorageService
 {
     private readonly ProcessRunner _runner;
     private readonly ILogSink _log;
+    private readonly PlatformCapabilities _capabilities;
 
-    public StorageService(ProcessRunner runner, ILogSink log)
+    public StorageService(ProcessRunner runner, ILogSink log, PlatformCapabilities? capabilities = null)
     {
         _runner = runner;
         _log = log;
+        _capabilities = capabilities ?? new PlatformCapabilities(runner, log);
     }
 
     private const string LetterHelper = @"
@@ -29,6 +39,12 @@ function Get-Letter($p) {
     /// <summary>枚举所有磁盘及其分区。</summary>
     public async Task<IReadOnlyList<DiskInfo>> GetDisksAsync(CancellationToken ct = default)
     {
+        // Windows 7 没有 Storage 模块，Get-Disk / Get-Partition 直接不存在
+        if (!await _capabilities.HasStorageModuleAsync(ct).ConfigureAwait(false))
+        {
+            return GetDisksViaWmi();
+        }
+
         var script = LetterHelper + @"
 $ErrorActionPreference = 'Stop'
 $out = @()
@@ -99,6 +115,181 @@ ConvertTo-Json -InputObject @($out) -Depth 6 -Compress
         return disks;
     }
 
+    // ---------------------------------------------------------------- WMI
+
+    // MSR（Microsoft 保留分区）的判定区间：Windows 上固定 16MB，少数机器 128MB。
+    // 取一个明显大于对齐间隙（1MB）的窗口，避免把普通空隙误当成隐藏分区。
+    private const long MinHiddenPartitionBytes = 8L * 1024 * 1024;
+    private const long MaxHiddenPartitionBytes = 256L * 1024 * 1024;
+
+    /// <summary>Windows 7 回退：用 WMI 读磁盘与分区（Storage 模块在那上面不存在）。</summary>
+    private IReadOnlyList<DiskInfo> GetDisksViaWmi()
+    {
+        var partitions = new List<WmiPartition>();
+        using (var searcher = new ManagementObjectSearcher("SELECT * FROM Win32_DiskPartition"))
+        {
+            foreach (ManagementBaseObject item in searcher.Get())
+            {
+                partitions.Add(new WmiPartition
+                {
+                    DiskIndex = WmiInt(item, "DiskIndex"),
+                    Index = WmiInt(item, "Index"),
+                    Start = WmiLong(item, "StartingOffset"),
+                    Size = WmiLong(item, "Size"),
+                    Type = item["Type"]?.ToString() ?? string.Empty,
+                    BootPartition = WmiBool(item, "BootPartition"),
+                });
+            }
+        }
+
+        // 盘符：逻辑盘 -> 分区，靠 Win32_LogicalDiskToPartition 关联
+        var letters = new Dictionary<(int Disk, int Index), string>();
+        using (var searcher = new ManagementObjectSearcher("SELECT * FROM Win32_LogicalDiskToPartition"))
+        {
+            foreach (ManagementBaseObject item in searcher.Get())
+            {
+                var reference = ParsePartitionReference(item["Antecedent"]?.ToString());
+                var letter = ParseDriveLetter(item["Dependent"]?.ToString());
+                if (reference is not null && letter.Length == 1)
+                {
+                    letters[reference.Value] = letter;
+                }
+            }
+        }
+
+        var systemDrive = GetSystemDriveLetter();
+        var disks = new List<DiskInfo>();
+        using (var searcher = new ManagementObjectSearcher("SELECT * FROM Win32_DiskDrive"))
+        {
+            foreach (ManagementBaseObject item in searcher.Get())
+            {
+                disks.Add(new DiskInfo
+                {
+                    DiskNumber = WmiInt(item, "Index"),
+                    FriendlyName = (item["Model"] ?? item["Caption"])?.ToString() ?? string.Empty,
+                    SizeBytes = WmiLong(item, "Size"),
+                });
+            }
+        }
+
+        foreach (var disk in disks)
+        {
+            var owned = partitions
+                .Where(p => p.DiskIndex == disk.DiskNumber)
+                .OrderBy(p => p.Start)
+                .ToList();
+
+            disk.PartitionStyle = owned.Any(p => p.Type.StartsWith("GPT", StringComparison.OrdinalIgnoreCase))
+                ? "GPT"
+                : "MBR";
+
+            var number = 0;
+            for (var i = 0; i < owned.Count; i++)
+            {
+                var part = owned[i];
+
+                // GPT 磁盘上 WMI 不报告 MSR（微软保留分区），而 diskpart 的分区号是把它
+                // 算在内的——直接按 Index+1 编号会整体错位（实测：C 盘 WMI 里是 index=1，
+                // diskpart 里却是分区 3）。MSR 是夹在 ESP 与第一个数据分区之间的一段
+                // 16MB（少数 128MB）空隙，用这段缺口把它补回去。
+                if (i > 0 && disk.PartitionStyle == "GPT")
+                {
+                    var previous = owned[i - 1];
+                    var gap = part.Start - (previous.Start + previous.Size);
+                    if (gap >= MinHiddenPartitionBytes && gap <= MaxHiddenPartitionBytes)
+                    {
+                        number++;
+                        disk.Partitions.Add(new PartitionInfo
+                        {
+                            DiskNumber = disk.DiskNumber,
+                            PartitionNumber = number,
+                            SizeBytes = gap,
+                            Type = "Reserved",
+                        });
+                    }
+                }
+
+                number++;
+                letters.TryGetValue((part.DiskIndex, part.Index), out var letter);
+                disk.Partitions.Add(new PartitionInfo
+                {
+                    DiskNumber = disk.DiskNumber,
+                    PartitionNumber = number,
+                    DriveLetter = letter ?? string.Empty,
+                    SizeBytes = part.Size,
+                    Type = NormalizeWmiPartitionType(part.Type),
+                    // WMI 的 BootPartition 指的是放引导文件的那个分区（UEFI 下就是 ESP），
+                    // 对应 Storage 的 IsSystem
+                    IsSystem = part.BootPartition,
+                    IsBoot = !string.IsNullOrEmpty(letter) &&
+                             letter.Equals(systemDrive, StringComparison.OrdinalIgnoreCase),
+                    IsEsp = WmiPartitionTypeName(part.Type)
+                        .Equals("System", StringComparison.OrdinalIgnoreCase),
+                });
+            }
+
+            disk.IsSystem = disk.Partitions.Any(p => p.IsBoot);
+        }
+
+        disks.Sort((a, b) => a.DiskNumber.CompareTo(b.DiskNumber));
+        _log.Debug($"WMI 枚举到 {disks.Count} 块磁盘");
+        return disks;
+    }
+
+    private sealed class WmiPartition
+    {
+        public int DiskIndex;
+        public int Index;
+        public long Start;
+        public long Size;
+        public string Type = string.Empty;
+        public bool BootPartition;
+    }
+
+    /// <summary>从 "Disk #0, Partition #1" 这样的引用里取出磁盘号与分区序号。</summary>
+    private static (int Disk, int Index)? ParsePartitionReference(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        var match = Regex.Match(value, @"Disk\s*#\s*(\d+)\s*,\s*Partition\s*#\s*(\d+)",
+            RegexOptions.IgnoreCase);
+        return match.Success
+            ? (int.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture),
+               int.Parse(match.Groups[2].Value, CultureInfo.InvariantCulture))
+            : null;
+    }
+
+    private static string ParseDriveLetter(string? value)
+    {
+        var match = Regex.Match(value ?? string.Empty, "\"([A-Za-z]):\"");
+        return match.Success ? match.Groups[1].Value.ToUpperInvariant() : string.Empty;
+    }
+
+    /// <summary>去掉 "GPT:" / "MBR:" 前缀后的类型名，例如 "GPT: System" -> "System"。</summary>
+    private static string WmiPartitionTypeName(string type)
+    {
+        var colon = type.IndexOf(':');
+        return colon >= 0 ? type[(colon + 1)..].Trim() : type.Trim();
+    }
+
+    private static string NormalizeWmiPartitionType(string type)
+    {
+        var name = WmiPartitionTypeName(type);
+        return name.Equals("Basic Data", StringComparison.OrdinalIgnoreCase) ? "Basic" : name;
+    }
+
+    private static int WmiInt(ManagementBaseObject item, string name) =>
+        item[name] is null ? 0 : Convert.ToInt32(item[name], CultureInfo.InvariantCulture);
+
+    private static long WmiLong(ManagementBaseObject item, string name) =>
+        item[name] is null ? 0 : Convert.ToInt64(item[name], CultureInfo.InvariantCulture);
+
+    private static bool WmiBool(ManagementBaseObject item, string name) =>
+        item[name] is not null && Convert.ToBoolean(item[name], CultureInfo.InvariantCulture);
+
     /// <summary>
     /// 准备暂存分区并返回其盘符。
     /// 优先复用已有空闲卷；否则压缩系统卷后新建一个临时分区。
@@ -112,6 +303,14 @@ ConvertTo-Json -InputObject @($out) -Depth 6 -Compress
     {
         var need = requiredBytes + (2L * 1024 * 1024 * 1024); // 预留 2GB 余量
         var needMb = need / (1024 * 1024);
+
+        // Windows 7 上 Resize-Partition / New-Partition / Format-Volume 全都不存在，
+        // 只能退回 diskpart（顺带用 WMI 找可复用的卷，因为 Get-Volume 也没有）
+        if (!await _capabilities.HasStorageModuleAsync(ct).ConfigureAwait(false))
+        {
+            return await PrepareStagingVolumeLegacyAsync(need, label, targetDiskNumber, ct)
+                .ConfigureAwait(false);
+        }
 
         var script = LetterHelper + $@"
 $ErrorActionPreference = 'Stop'
@@ -220,6 +419,218 @@ Write-Output ('CREATED|' + $free + '|' + ($free + ':\' + $label) + '|' + [int]$n
         StagingHostDiskNumber = parts.Length > 5 && int.TryParse(parts[5], out var hostDisk) ? hostDisk : -1;
         StagingHostPartitionNumber = parts.Length > 6 && int.TryParse(parts[6], out var hostPart) ? hostPart : -1;
         return parts[2];
+    }
+
+    /// <summary>
+    /// Windows 7 回退：准备暂存分区。
+    /// 方案 A 用 WMI 找可复用的卷（Get-Volume 在 Win7 上不存在），
+    /// 方案 B 用 diskpart 压缩系统分区再建一个（Resize-Partition / New-Partition 都没有）。
+    /// </summary>
+    private async Task<string> PrepareStagingVolumeLegacyAsync(
+        long need,
+        string label,
+        int targetDiskNumber,
+        CancellationToken ct)
+    {
+        _log.Info($"准备暂存分区（diskpart 回退），需要约 {need / (1024 * 1024)} MB 空间...");
+
+        var volumes = ReadLogicalVolumes();
+        var disks = GetDisksViaWmi();
+
+        // ---- 方案 A：复用一个空间足够、不在目标盘上的 NTFS 卷 ----
+        PartitionInfo? best = null;
+        var bestFree = 0L;
+        foreach (var disk in disks)
+        {
+            if (disk.DiskNumber == targetDiskNumber)
+            {
+                continue;
+            }
+
+            foreach (var part in disk.Partitions)
+            {
+                if (string.IsNullOrEmpty(part.DriveLetter) || part.IsSystem)
+                {
+                    continue;
+                }
+
+                if (!volumes.TryGetValue(part.DriveLetter, out var volume) ||
+                    !volume.FileSystem.Equals("NTFS", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                if (volume.FreeSpace > need && volume.FreeSpace > bestFree)
+                {
+                    best = part;
+                    bestFree = volume.FreeSpace;
+                }
+            }
+        }
+
+        if (best is not null)
+        {
+            var reuseDir = Path.Combine(best.DriveLetter + ":\\", label);
+            Directory.CreateDirectory(reuseDir);
+            StagingWasCreated = false;
+            StagingDiskNumber = best.DiskNumber;
+            StagingPartitionNumber = best.PartitionNumber;
+            StagingHostDiskNumber = -1;
+            StagingHostPartitionNumber = -1;
+            _log.Info($"复用现有分区 {best.DriveLetter}: 作为暂存区");
+            return reuseDir;
+        }
+
+        // ---- 方案 B：压缩系统分区，新建临时分区 ----
+        var systemDrive = GetSystemDriveLetter();
+        var hostDisk = disks.FirstOrDefault(d => d.Partitions.Any(p =>
+            p.DriveLetter.Equals(systemDrive, StringComparison.OrdinalIgnoreCase)));
+        var hostPart = hostDisk?.Partitions.FirstOrDefault(p =>
+            p.DriveLetter.Equals(systemDrive, StringComparison.OrdinalIgnoreCase));
+
+        if (hostDisk is null || hostPart is null)
+        {
+            throw new InvalidOperationException(
+                $"没有找到系统分区（{systemDrive}:），无法压缩出暂存空间。");
+        }
+
+        if (hostDisk.PartitionStyle.Equals("RAW", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException("系统磁盘分区表为 RAW，无法压缩。");
+        }
+
+        var free = PickFreeStagingLetter(volumes);
+        if (free is null)
+        {
+            throw new InvalidOperationException("没有可用盘符可以分配给临时分区。");
+        }
+
+        var shrinkMb = (long)Math.Ceiling(need / (1024.0 * 1024.0));
+        var created = await RunCreateStagingPartitionAsync(
+            hostDisk, hostPart, shrinkMb, label, free.Value, ct).ConfigureAwait(false);
+        if (!created)
+        {
+            throw new InvalidOperationException(
+                "压缩系统分区并新建暂存分区失败。常见原因是分区里有不可移动的文件" +
+                "（页面文件、休眠文件、系统还原点），可先关闭休眠、清理磁盘后再试。");
+        }
+
+        // 新建完再查一次，拿到它真正的分区号（diskpart 不告诉我们）
+        var staged = GetDisksViaWmi()
+            .SelectMany(d => d.Partitions.Select(p => (Disk: d, Part: p)))
+            .FirstOrDefault(x => x.Part.DriveLetter.Equals(free.Value.ToString(),
+                StringComparison.OrdinalIgnoreCase));
+
+        StagingWasCreated = true;
+        StagingDiskNumber = staged.Part?.DiskNumber ?? hostDisk.DiskNumber;
+        StagingPartitionNumber = staged.Part?.PartitionNumber ?? -1;
+        StagingHostDiskNumber = hostDisk.DiskNumber;
+        StagingHostPartitionNumber = hostPart.PartitionNumber;
+        _log.Info($"已新建临时分区 {free}: 作为暂存区（宿主分区：磁盘 {hostDisk.DiskNumber} 分区 {hostPart.PartitionNumber}）");
+
+        var dir = Path.Combine(free.Value + ":\\", label);
+        Directory.CreateDirectory(dir);
+        return dir;
+    }
+
+    /// <summary>
+    /// 用 diskpart 压缩系统分区并新建、格式化、分配盘符。
+    /// MBR 磁盘上主分区数已满时退回「创建逻辑分区」再试一次。
+    /// </summary>
+    private async Task<bool> RunCreateStagingPartitionAsync(
+        DiskInfo hostDisk,
+        PartitionInfo hostPart,
+        long shrinkMb,
+        string label,
+        char letter,
+        CancellationToken ct)
+    {
+        var attempts = hostDisk.PartitionStyle.Equals("MBR", StringComparison.OrdinalIgnoreCase)
+            ? new[] { "primary", "logical" }
+            : new[] { "primary" };
+
+        foreach (var kind in attempts)
+        {
+            var scriptPath = Path.Combine(Path.GetTempPath(), $"ctprep-staging-{kind}.txt");
+            var lines = new[]
+            {
+                $"select disk {hostDisk.DiskNumber}",
+                $"select partition {hostPart.PartitionNumber}",
+                $"shrink desired={shrinkMb}",
+                $"create partition {kind}",
+                $"format fs=ntfs quick label={label}",
+                $"assign letter={letter}",
+                "exit",
+            };
+            await File.WriteAllLinesAsync(scriptPath, lines, ct).ConfigureAwait(false);
+
+            var result = await _runner.RunDiskPartAsync(scriptPath, ct).ConfigureAwait(false);
+            _log.Debug($"diskpart（{kind}）退出码 {result.ExitCode}");
+
+            try
+            {
+                File.Delete(scriptPath);
+            }
+            catch
+            {
+                // 临时脚本删不掉不影响结果
+            }
+
+            if (result.ExitCode == 0)
+            {
+                return true;
+            }
+
+            _log.Warn($"diskpart 用 {kind} 方式创建暂存分区失败：{result.Combined}");
+        }
+
+        return false;
+    }
+
+    /// <summary>读所有固定盘的盘符、文件系统与剩余空间。</summary>
+    private static Dictionary<string, (string FileSystem, long FreeSpace)> ReadLogicalVolumes()
+    {
+        var map = new Dictionary<string, (string, long)>(StringComparer.OrdinalIgnoreCase);
+        using var searcher = new ManagementObjectSearcher(
+            "SELECT DeviceID, FileSystem, FreeSpace, DriveType FROM Win32_LogicalDisk");
+        foreach (ManagementBaseObject item in searcher.Get())
+        {
+            var id = item["DeviceID"]?.ToString() ?? string.Empty;
+            if (id.Length < 2 || id[1] != ':')
+            {
+                continue;
+            }
+
+            if (WmiInt(item, "DriveType") != 3)
+            {
+                continue; // 3 = 本地固定磁盘
+            }
+
+            map[id[0].ToString()] = (
+                item["FileSystem"]?.ToString() ?? string.Empty,
+                WmiLong(item, "FreeSpace"));
+        }
+
+        return map;
+    }
+
+    /// <summary>
+    /// 挑一个没被占用的盘符。跳过 PE 里固定占用的 S:（EFI）、W:（目标 Windows）、
+    /// B:（BIOS 系统保留分区），否则后续 assign / bcdboot 会冲突。
+    /// </summary>
+    private static char? PickFreeStagingLetter(
+        IReadOnlyDictionary<string, (string FileSystem, long FreeSpace)> volumes)
+    {
+        foreach (var candidate in new[] { 'T', 'U', 'V', 'Y', 'Z' })
+        {
+            var letter = candidate.ToString();
+            if (!volumes.ContainsKey(letter) && !Directory.Exists(letter + ":\\"))
+            {
+                return candidate;
+            }
+        }
+
+        return null;
     }
 
     /// <summary>暂存分区是否为本次新建（新建的部署后需要删除并合并空间）。</summary>
