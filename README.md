@@ -29,7 +29,23 @@ Windows 重装工具。准备阶段在当前系统里跑（WPF 界面，新手 /
 
 ## Windows 7 上的差异
 
-Win7 既没有 PowerShell 的 Storage 模块（`Get-Disk` / `Resize-Partition` 那套），也挂不了 ISO（`Mount-DiskImage`）。程序启动时会探测这两项能力，缺哪个就走对应的回退路径，Win8 及以上完全不受影响：
+Win7 缺少的东西分两类，都得补。
+
+**一、系统组件：Universal CRT。** Win7 不自带它，缺了进程在加载阶段就起不来，报
+「无法启动此程序，因为计算机中丢失 api-ms-win-crt-runtime-l1-1-0.dll」。这个错误发生在
+程序自己的代码跑起来之前，所以在程序里做检测或提示都没用，只能让它别缺。
+
+发布版已经把整套 UCRT（`ucrtbase.dll` 加 42 个 `api-ms-win-*.dll` 转发器）放在
+`CTPrep.exe` 同目录，即 Microsoft 文档的 app-local 部署方式，**不必先装 KB2999226**。
+Windows 10/11 由系统 API set 解析到自带版本，这些副本不会被使用。来源与许可见
+`redist/ucrt/README.md`。
+
+> 如果这台 Win7 仍然报缺失，装一次 **KB2999226**（或 Visual C++ 2015-2022 可再发行组件包 x64）
+> 即可，装完可以把那批文件删掉——那是 Microsoft 的首选做法，只是需要手动做一步。
+
+**二、系统能力。** Win7 没有 PowerShell 的 Storage 模块（`Get-Disk` / `Resize-Partition` 那套），
+也挂不了 ISO（`Mount-DiskImage`）。程序启动时会探测这两项能力，缺哪个就走对应的回退路径，
+Win8 及以上完全不受影响：
 
 | 环节 | Win8 及以上 | Win7 |
 | --- | --- | --- |

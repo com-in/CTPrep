@@ -55,6 +55,13 @@
     <!-- 默认 PE 载荷也必须随绿色版发布；config.ini 的默认路径指向该目录。 -->
     <None Include="..\..\runtime\**\*" Link="runtime\%(RecursiveDir)%(Filename)%(Extension)"
           CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <!-- Windows 7 上没有 Universal CRT（api-ms-win-crt-*.dll + ucrtbase.dll），
+         缺了它进程在加载阶段就起不来，报「丢失 api-ms-win-crt-runtime-l1-1-0.dll」。
+         .NET 8 的运行时不再自带这套文件（.NET 6 自带，因为那时还支持 Win7）。
+         按 Microsoft 的 app-local 部署方式把整套放在 exe 同目录，Win7 就不必先装
+         KB2999226；Windows 10/11 由系统 API set 解析到自带版本，这些文件不会被使用。 -->
+    <None Include="..\..\redist\ucrt\x64\*.dll" Link="%(Filename)%(Extension)"
+          CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>
