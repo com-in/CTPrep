@@ -46,6 +46,12 @@ DEFAULT_BASE = "https://lf.epmc.qzz.io/"
 SHA256_RE = re.compile(r"^[0-9a-fA-F]{64}$")
 TIMEOUT = 30
 
+# 自建源前面挂了 Cloudflare，默认会把 Python 的 "Python-urllib/x.y" 挡掉
+# （HTTP 403 + Error 1010 Access denied）。带一个普通浏览器的 UA 就能正常返回。
+# 也可以在 Cloudflare 那边给这个 UA 加白名单，那就不用伪装了。
+USER_AGENT = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+              "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36")
+
 
 def load_sources(path):
     """读自建源配置，返回 [(版本键, sha256)]；sha256 未填的条目跳过。"""
@@ -127,7 +133,10 @@ def fetch_link(base, sha256):
         base.rstrip("/"),
         urllib.parse.urlencode({"sha256": sha256}),
     )
-    request = urllib.request.Request(url, headers={"Accept": "application/json, text/plain"})
+    request = urllib.request.Request(url, headers={
+        "Accept": "application/json, text/plain",
+        "User-Agent": USER_AGENT,
+    })
     try:
         with urllib.request.urlopen(request, timeout=TIMEOUT) as response:
             body = response.read().decode("utf-8", errors="replace")

@@ -1,5 +1,5 @@
 {
-  "Windows 7": "<64 位 sha256>",
-  "Windows 8": "<64 位 sha256>",
-  "Windows 8.1": "<64 位 sha256>"
+  "Windows 7": "1066ac545963f0f931a6ffd8fc1502ed3086e9dd1c60290e445035e443874d9b",
+  "Windows 8": "cb39479904ea91171d5a443da3f691a71ed529151797e439b2b35dc5cd5be8bb",
+  "Windows 8.1": "af5f2aa41a0a66b98185f5390aefaa94fd5ce16c6f1092fd6465c31ffb95a650"
 }

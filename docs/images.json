@@ -9,6 +9,22 @@
     "Windows 10": {
       "url": "https://software.download.prss.microsoft.com/dbazure/Win10_22H2_Chinese_Simplified_x64v1.iso?t=574b56c2-21cc-4366-810a-e2dba7af90b3&P1=1791662613&P2=602&P3=2&P4=plH%2bhO5yjd7zz9grvPfKkdKEwEXxpFCij2uEsMvNnAkI5Rjndmx%2b6AbjPsHaSUPuAt3nMQuUEP995IawSf6CtSDsPssDnIcEHCZtN%2fVG%2bLtWu%2fXQhO%2bhrCKKOEIktyK6fSeHutUqPiugHWvZ5X0NtEsFXnkbOV%2bEJIat1SpSrVF4kDiadmMmKDN%2fx0hLsO19Zupp2z942sn7K0qybbOhD2qT%2bZNSGbaHrm7y4JTFUC2WJveBlKjUo82rQSjWr4TdspNzddUpiT8Hrv7SndgYI898qkKWfRJddOinpeOLDUwo1%2bHSCzU3lNNozl4b%2foUKJetXJzfe3g5pYXMmJgw8Ng%3d%3d",
       "sha256": ""
+    },
+    "Windows 7": {
+      "url": "http://lf.epmc.qzz.io/d/8eba951a70cbeef7",
+      "sha256": "1066ac545963f0f931a6ffd8fc1502ed3086e9dd1c60290e445035e443874d9b",
+      "source": "custom"
+    },
+    "Windows 8": {
+      "url": "http://lf.epmc.qzz.io/d/a0f173b849860636",
+      "sha256": "cb39479904ea91171d5a443da3f691a71ed529151797e439b2b35dc5cd5be8bb",
+      "source": "custom"
+    },
+    "Windows 8.1": {
+      "url": "http://lf.epmc.qzz.io/d/80e36d966b8e0f45",
+      "sha256": "af5f2aa41a0a66b98185f5390aefaa94fd5ce16c6f1092fd6465c31ffb95a650",
+      "source": "custom"
     }
-  }
+  },
+  "custom_updated": "2026-10-10T13:01:21Z"
 }
