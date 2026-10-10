@@ -1,6 +1,5 @@
 {
   "schema": 1,
-  "updated": "2026-10-10T13:05:31Z",
   "images": {
     "Windows 11": {
       "url": "https://software.download.prss.microsoft.com/dbazure/Windows11_Client_x64_zh-cn_26300_9457.iso?t=2a58e073-dd74-4af2-b8a3-0f583cd886c7&P1=1791723923&P2=602&P3=2&P4=s9Xap3Pi2vas8Wh37erbIxW5z0lY9SfWhpW2GUdqAJjN1iGJjx%2bzM20cb3hrc%2bcRLaCZR0Qr0aAS7H4PFittE77BGdRR%2bxViV%2bR9H5z4vH1mHVaTFCrcLExsT0CC6V4wG84bzaCQkrulc3dr3wvaHyZw2U%2f52HpaSclZY46UMPscGveUlmc8e9UeYYSwOPIvwT0t5VFh1a0FHz9R6ALapHilQ70%2fv7sw2Xm5NBOfpmee%2f5l7hikYPe63KifFa2jTciOTtiI4QwlEWlCgHx3cspr65mRFkFF4pesu2xAxBbE63qL7M97M0Dxij%2fewvgRzxt5zKJTcnmSG%2ffLlOQRu7Q%3d%3d",
@@ -25,6 +24,5 @@
       "sha256": "af5f2aa41a0a66b98185f5390aefaa94fd5ce16c6f1092fd6465c31ffb95a650",
       "source": "custom"
     }
-  },
-  "custom_updated": "2026-10-10T13:05:32Z"
+  }
 }

@@ -12,6 +12,13 @@
 # build.yml ignores manifest-only changes instead (paths-ignore), so a sync
 # commit still refreshes the published manifest without triggering a build.
 #
+# Forcing a re-sync: the two syncs throttle on SEPARATE stamps in the manifest
+# ("updated" for Microsoft, "custom_updated" for the self-hosted source).
+# Delete BOTH of them to make the next run refresh everything at once.
+# Clearing only one makes the two drift apart: the cleared one refreshes now
+# and the other an hour later, and from then on they keep taking turns instead
+# of refreshing together in the same run.
+#
 # Triggers:
 #   - schedule          : hourly wake-up; syncs only when the manifest is stale
 #   - workflow_dispatch : manual run; always syncs
