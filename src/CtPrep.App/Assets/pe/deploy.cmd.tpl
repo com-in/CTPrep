@@ -100,8 +100,29 @@ if exist "%STAGE%\drivers" (
 
 call :log "[7/9] Rebuilding the boot configuration"
 call :ui 88 BOOT_CONFIG
+rem bcdboot from a modern WinPE insists on the 2023-PCA "Ex" boot binaries
+rem (bootmgfw_EX.efi) once the machine trusts the 2023 CA. Images older than
+rem Windows 11 24H2 ship no \Windows\boot\EFI_EX, so that lookup fails and
+rem bcdboot aborts with exit 193 (BFSVC 0xc1). Images that do carry the folder
+rem keep the plain command; older ones force the classic binaries instead.
+if exist "%TARGET%\Windows\boot\EFI_EX\bootmgfw_EX.efi" goto :bcd_plain
+
+rem /offline ties the binary choice to /bootex (documented switch); clearing
+rem BFSVC_USE_EX_BINS covers bcdboot builds that predate /offline.
+set "BFSVC_USE_EX_BINS="
+{{BCDBOOT}} /offline >>"%LOG%" 2>&1
+set "BOOT_RC=%ERRORLEVEL%"
+if "%BOOT_RC%"=="0" goto :bcd_done
+call :log "      bcdboot /offline failed with %BOOT_RC%, retrying without it"
 {{BCDBOOT}} >>"%LOG%" 2>&1
 set "BOOT_RC=%ERRORLEVEL%"
+goto :bcd_done
+
+:bcd_plain
+{{BCDBOOT}} >>"%LOG%" 2>&1
+set "BOOT_RC=%ERRORLEVEL%"
+
+:bcd_done
 >>"%LOG%" echo BCDBOOT exit=%BOOT_RC% target=%BOOT_TARGET%
 if not "%BOOT_RC%"=="0" ( set "RESULT=BCDBOOT_FAILED_%BOOT_RC%" & goto :fail )
 
