@@ -59,6 +59,26 @@ jobs:
             python3 tools/sync-microsoft-links.py
           fi
 
+      # Self-hosted source for Windows 7 / 8 / 8.1. It keys files by sha256 and
+      # its links expire about every 24 hours too, so it needs the same kind of
+      # refresh. It only touches the keys listed in tools/custom-sources.json
+      # and throttles on the manifest's own custom_updated stamp - sharing
+      # "updated" with the step above would make whichever runs first keep the
+      # other one permanently "fresh", so the other would never refresh again.
+      #
+      # continue-on-error: a broken self-hosted source must not stop the
+      # Microsoft links from being committed.
+      - name: Sync self-hosted source links
+        continue-on-error: true
+        env:
+          CTPREP_LINK_API: ${{ secrets.CTPREP_LINK_API }}
+        run: |
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            python3 tools/sync-custom-links.py --min-age-hours 22
+          else
+            python3 tools/sync-custom-links.py
+          fi
+
       - name: Commit and push when changed
         run: |
           if git diff --quiet -- docs/images.json; then
@@ -68,7 +88,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add docs/images.json
-          git commit -m "Sync Microsoft download links"
+          git commit -m "Sync download links"
           # Someone may have pushed while the sync was running: rebase onto their
           # work and retry. Do NOT use --force here: it would overwrite the
           # remote branch and silently drop their commits.
