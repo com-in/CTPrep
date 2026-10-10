@@ -72,13 +72,16 @@ CTPrep.exe ──请求──▶ https://<你的域名>/images.json ──▶ �
 自建源的条目在清单里带 `"source": "custom"` 标记，且 `sha256` 是真实值，
 所以下载完成后会做完整性校验（微软那两条目前 sha256 留空，只跳过校验）。
 
-自建源用的是这套接口（地址为环境变量 `CTPREP_LINK_API`）：
+自建源用的是这套接口（默认 `https://lf.epmc.qzz.io/`，可用环境变量 `CTPREP_LINK_API` 改）：
 
 ```
 GET  {base}/api/filelink?sha256=<64 位十六进制>   取链接（不存在则自动创建）
 POST {base}/api/refresh                           重新生成（旧短码失效，下载计数保留）
 GET  {base}/api/info?sha256=<sha256>              查询文件与链接状态
 ```
+
+sha256 尚未登记时服务返回 `404 {"error":"request_failed","message":"该 sha256 尚未登记文件"}`，
+同步脚本会把 `message` 直接打进日志，方便分辨「没登记」和「服务挂了」。
 
 要往清单里加自建源的镜像，把「版本键 → sha256」填进 `tools/custom-sources.json` 即可。
 sha256 没填或没配置地址时脚本只是跳过，不会让同步流程失败。

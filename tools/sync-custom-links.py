@@ -22,9 +22,9 @@ Win11 / Win10 仍然由 sync-microsoft-links.py 抓微软官方直链，本脚�
 
 配置：
     tools/custom-sources.json      版本键 -> sha256（64 位十六进制）
-    环境变量 CTPREP_LINK_API       自建源地址（默认 http://localhost:3000）
+    环境变量 CTPREP_LINK_API       自建源地址（默认 https://lf.epmc.qzz.io/）
 
-没填 sha256 或没配置地址时只是跳过，不会让流程失败——方便先把脚本接进来、之后再填值。
+sha256 没填时只是跳过，不会让流程失败——方便先把脚本接进来、之后再填值。
 
 依赖：Python 3.8+（只用标准库，不需要 bash / curl）。
 """
@@ -41,7 +41,7 @@ from datetime import datetime, timezone
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_SOURCES = os.path.join(HERE, "custom-sources.json")
-DEFAULT_BASE = "http://localhost:3000"
+DEFAULT_BASE = "https://lf.epmc.qzz.io/"
 
 SHA256_RE = re.compile(r"^[0-9a-fA-F]{64}$")
 TIMEOUT = 30
@@ -103,6 +103,24 @@ def extract_link(body):
     return None
 
 
+def describe_error(exc):
+    """把服务返回的错误体读出来：{"error":...,"message":...} 优先取 message。
+
+    只看 HTTP 状态码太难排查——比如 404 可能只是「这个 sha256 还没登记文件」。
+    """
+    try:
+        raw = exc.read().decode("utf-8", errors="replace")
+    except Exception:
+        return str(exc)
+    try:
+        payload = json.loads(raw)
+    except json.JSONDecodeError:
+        return raw.strip()[:200]
+    if isinstance(payload, dict):
+        return str(payload.get("message") or payload.get("error") or raw)[:200]
+    return raw.strip()[:200]
+
+
 def fetch_link(base, sha256):
     """调 /api/filelink 取一个 sha256 对应的链接；失败抛 RuntimeError。"""
     url = "%s/api/filelink?%s" % (
@@ -113,9 +131,9 @@ def fetch_link(base, sha256):
     try:
         with urllib.request.urlopen(request, timeout=TIMEOUT) as response:
             body = response.read().decode("utf-8", errors="replace")
-    except urllib.error.URLError as exc:
-        raise RuntimeError("请求失败 %s（%s）" % (url, exc))
-    except OSError as exc:
+    except urllib.error.HTTPError as exc:
+        raise RuntimeError("HTTP %d：%s" % (exc.code, describe_error(exc)))
+    except (urllib.error.URLError, OSError) as exc:
         raise RuntimeError("请求失败 %s（%s）" % (url, exc))
 
     link = extract_link(body)
@@ -159,10 +177,10 @@ def main():
                         help="自建源时间戳比这个小时数新时直接跳过（定时任务节流用）")
     args = parser.parse_args()
 
-    base = (args.base_url or os.environ.get("CTPREP_LINK_API") or "").strip()
-    if not base:
-        print("跳过：未配置自建源地址（用 --base-url 或环境变量 CTPREP_LINK_API 指定）")
-        return 0
+    # 地址有内置默认值，只有想临时换源时才需要 --base-url 或 CTPREP_LINK_API
+    base = ((args.base_url or os.environ.get("CTPREP_LINK_API") or "").strip()
+            or DEFAULT_BASE)
+    print("自建源地址：%s" % base)
 
     sources = load_sources(args.sources)
     if args.only:

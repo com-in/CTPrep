@@ -68,10 +68,13 @@ jobs:
       #
       # continue-on-error: a broken self-hosted source must not stop the
       # Microsoft links from being committed.
+      #
+      # The address defaults to https://lf.epmc.qzz.io/ inside the script;
+      # CTPREP_LINK_API only needs to be set to point somewhere else.
       - name: Sync self-hosted source links
         continue-on-error: true
         env:
-          CTPREP_LINK_API: ${{ secrets.CTPREP_LINK_API }}
+          CTPREP_LINK_API: ${{ vars.CTPREP_LINK_API }}
         run: |
           if [ "${{ github.event_name }}" = "schedule" ]; then
             python3 tools/sync-custom-links.py --min-age-hours 22
