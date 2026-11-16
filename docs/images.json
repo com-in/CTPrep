@@ -2,11 +2,11 @@
   "schema": 1,
   "images": {
     "Windows 11": {
-      "url": "https://software.download.prss.microsoft.com/dbazure/Windows11_Client_x64_zh-cn_26300_9457.iso?t=f14ba0a1-fe3e-49a9-955c-a229819c89dd&P1=1794864505&P2=602&P3=2&P4=ZL0xKaDd9toaddrrtWwbAF02xRyjg4kIKqv3Uy1Rz1tFZ2rmzAQDRdRoRgQVYDOWK%2f%2fCh%2bdUOJdcwPM%2bRV2uvIlBe9KneBO46AEzpQgon%2brysg8xMjl66Hdp4hoi5FNE4YISP4Tv9V0ZBi5BmwAnUwm53EtSQExaS4EIZwTdnUWAYkmixWZxqB2Gt60Yj1jqDo17N%2bnmdhxiJaMu40eYvTxKGg2U0V9OCAJxDv957SlZcZwUTkrteGgYe1ZJNefD%2fidqFfsNpBRY5fquNcGAMm0g5EtYS6L6ZycZlQ7ipqnNhF3Xewt5PNuLy6QDnuo63O0OM0R1WHg5aFRMFxQrhw%3d%3d",
+      "url": "https://software.download.prss.microsoft.com/dbazure/Windows11_Client_x64_zh-cn_26300_9457.iso?t=39b803f6-510f-4917-82d3-58c8a024d0c3&P1=1794943815&P2=602&P3=2&P4=AGKbOtTDav2xJ0CuKfegB46HlN1Az%2ba3KTC657ovBogw7rRmnLkjaKNF7h7mKIsQx9GBhWufCL4oosgTUTb%2bjycl%2b51KMcqUc1rdulyhFlcUnPHpgxRhCotct1D1b%2b5pDCxTCHeOxE3y4%2bkyM19YlrBArrLI6PLdECsJ0ATsHkHyxIyvUhgNMmbPGrfpAiJbQcZO%2bxIVMHZoQ7ZcxrHnhxbMaF2PY6xnXZMqT0rajGu%2bA03IMKf4Enjbt%2bL%2befz%2bofyJpRG2kpZ2ufFw%2bw9YcZwyiQW5IXAXm%2feB%2fvpGiey6bRcWEvasf0xxeY0WYMBYC%2fpD1jvY9SR%2ffN%2bvjN4qmw%3d%3d",
       "sha256": ""
     },
     "Windows 10": {
-      "url": "https://software.download.prss.microsoft.com/dbazure/Win10_22H2_Chinese_Simplified_x64v1.iso?t=6c1754e4-4dd7-4385-a304-b7cb146df944&P1=1794864512&P2=602&P3=2&P4=YCMoOaPBjS3GX5sniAv8diiCX4MLlDhR%2bkQE3h4a%2fL27mSQi5feXUlFz8E9z7ZYIEcZLkYnVF2ZR5IdGimmMPEtHKmqjZaLdDNSXzsbb8R6y5TLYFR1mV30FTBl0Uh3k2gooBq3HjbsgQHzshZ9jeQKh9NQRsmKxkl6aMFOL6NqLhgLPLWM8RGuF8DPeMOC3JRAYF5KYPxQh8Wne8iI5hpj85tMi584XLw0Fh3oYhUAhX4O9886u7iqsTVoR2hQtue5BNDbC6d%2bpY9WvnWA3pZMqorCLPqK%2bmNFUdXRF4tJl4woLTabCzEOkmn1hmt6118jQVVeSyW3I%2beITsanPMg%3d%3d",
+      "url": "https://software.download.prss.microsoft.com/dbazure/Win10_22H2_Chinese_Simplified_x64v1.iso?t=8624c016-15d1-4aa4-8fa6-916d937d79b9&P1=1794943817&P2=602&P3=2&P4=mPBvIPI6FJ9EZroYTrRZjTPtYRRVI%2bsa3o3ZtLdjx8KlWOZGv6EIW8bGuRIgLUzIU4OmoEe836WP66UK1bqNklkRCnlyosfFfp03qB1Qg8fm6ivl%2fIxQiBuX9wn0l4OCiaHIGIjUZIquldvZhHIKj3Oia8pllXkiAaxG5XGzTLK38zsj7ZKi8oRateZnF6vnYhGdcaWf3AHh27VSbSLWFae4KiNS4%2bnMs8b%2bzgYZt%2bzxbrwZpIUNIfW5RHH1fHSA9LyvGHAqwgD2BaBXHxdKqHCg0IU3EHHs4Ic8F3XGBv4zBX3QNr%2fH2pmuAIDy8jtxQocxoMsslPaRur4YlPiP3Q%3d%3d",
       "sha256": ""
     },
     "Windows 7": {
@@ -25,6 +25,6 @@
       "source": "custom"
     }
   },
-  "updated": "2026-11-15T21:28:32Z",
+  "updated": "2026-11-16T19:30:17Z",
   "custom_updated": "2026-11-13T23:15:02Z"
 }
